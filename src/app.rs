@@ -80,21 +80,19 @@ impl App {
         }
 
         // Scroll wheel
-        let scroll = mouse_wheel().1;
+        let mut scroll = mouse_wheel().1;
         if scroll > 0.0 {
             self.total_scroll += scroll;
             if self.total_scroll >= 120.0 {
                 // scrolled up
-                let scroll_inc = self.total_scroll / 120.0;
-                println!("{scroll_inc}");
+                scroll = self.total_scroll / 120.0;
                 self.total_scroll = 0.0;
             }
         } else if scroll < 0.0 {
-            self.total_scroll -= scroll;
-            if self.total_scroll <= -120.0 {
+            self.total_scroll += scroll;
+            if self.total_scroll <= -110.0 {
                 // scrolled down
-                let scroll_dec = self.total_scroll / 120.0;
-                println!("{scroll_dec}");
+                scroll = self.total_scroll / 120.0;
                 self.total_scroll = 0.0;
             }
         }
