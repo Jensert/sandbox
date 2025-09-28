@@ -1,6 +1,7 @@
+use macroquad::prelude::*;
 use std::{collections::HashMap, ops::Deref};
 
-use macroquad::prelude::*;
+use crate::{pixel::PixelType, pixel_grid::PixelGrid};
 pub fn window_settings() -> Conf {
     Conf {
         window_title: String::from("Sandbox"),
@@ -18,16 +19,11 @@ pub struct App {
     default_camera: Camera2D,
 
     should_quit: bool,
+    total_scroll: f32,
 }
 impl App {
     pub fn new(render_size: (u32, u32)) -> Self {
-        let pixel_grid = PixelGrid {
-            width: render_size.0,
-            height: render_size.1,
-            grid: HashMap::new(),
-            grid_back_buffer: HashMap::new(),
-        };
-
+        let pixel_grid = PixelGrid::new(render_size);
         // Create the texture to which we will draw
         let render_target = render_target(render_size.0, render_size.1);
         // Set filter mode to nearest to prevent blurry pixels
@@ -58,6 +54,7 @@ impl App {
             default_camera,
 
             should_quit: false,
+            total_scroll: 0.0,
         }
     }
 
@@ -69,17 +66,37 @@ impl App {
     }
 
     fn handle_mouse_input(&mut self) {
-        if is_mouse_button_pressed(MouseButton::Left) {
+        if is_mouse_button_down(MouseButton::Left) {
             let m_screen_pos = mouse_position(); // Get mouse position
             let m_world_pos = self
                 .render_camera
                 .screen_to_world(vec2(m_screen_pos.0, m_screen_pos.1)) // Transform mouse position to world space
                 .round(); // Round world position to integer, to prevent pixels at half positions
-            self.pixel_grid.grid.insert(
+            self.pixel_grid.grid_mut().insert(
                 (m_world_pos.x as u32, m_world_pos.y as u32),
-                Pixel::new(PixelType::Sand),
+                PixelType::Sand,
             );
             println!("screen pos: {m_screen_pos:?}\nworld_pos: {m_world_pos:?}");
+        }
+
+        // Scroll wheel
+        let scroll = mouse_wheel().1;
+        if scroll > 0.0 {
+            self.total_scroll += scroll;
+            if self.total_scroll >= 120.0 {
+                // scrolled up
+                let scroll_inc = self.total_scroll / 120.0;
+                println!("{scroll_inc}");
+                self.total_scroll = 0.0;
+            }
+        } else if scroll < 0.0 {
+            self.total_scroll -= scroll;
+            if self.total_scroll <= -120.0 {
+                // scrolled down
+                let scroll_dec = self.total_scroll / 120.0;
+                println!("{scroll_dec}");
+                self.total_scroll = 0.0;
+            }
         }
     }
 
@@ -124,93 +141,4 @@ impl App {
     pub fn pixels_mut(&mut self) -> &mut PixelGrid {
         return &mut self.pixel_grid;
     }
-}
-
-pub struct PixelGrid {
-    width: u32,
-    height: u32,
-    grid: HashMap<(u32, u32), Pixel>,
-    grid_back_buffer: HashMap<(u32, u32), Pixel>,
-}
-impl PixelGrid {
-    pub fn grid(&self) -> &HashMap<(u32, u32), Pixel> {
-        return &self.grid;
-    }
-
-    pub fn grid_mut(&mut self) -> &mut HashMap<(u32, u32), Pixel> {
-        return &mut self.grid;
-    }
-
-    pub fn update(&mut self) {
-        //////////////////(Old X, Y)  (New X, Y)  Pixel to move
-        let changes: Vec<((u32, u32), (u32, u32), Pixel)> = self
-            .grid
-            .iter() // Iterate over the hashmap
-            // Filter certain keys and map them
-            .filter_map(|(&(x, y), &pixel)| {
-                // Match the pixel type to determine which behaviour to apply
-                match pixel.pixel_type {
-                    PixelType::Sand => {
-                        // Check if y position is bottom of the screen
-                        if y < self.height - 1 {
-                            let new_pos = (x, y + 1); // If it isn't set new pos 1 pixel down
-                            Some(((x, y), new_pos, pixel)) // return the old pos, new pos and the pixel data
-                        } else {
-                            None // If pixel is already at bottom of the screen, do nothing
-                        }
-                    }
-                    PixelType::Water => unimplemented!(),
-                }
-            })
-            .collect();
-        // Here we loop over the changes vector and apply all modifications in the grid hashmap
-        for (old_pos, new_pos, pixel) in changes {
-            self.grid.remove(&old_pos); // First we remove the pixel from the key at the old position
-            self.grid.insert(new_pos, pixel); // Then we insert that pixel into a new key
-        }
-    }
-
-    pub fn draw(&self) {
-        // Here we loop over the pixel grid to draw all the pixels
-        for (pos, pixel) in &self.grid {
-            // Capture the position and the pixel data
-            // Draw rectangle for every entgry in the hashmap, at the position it is in, with the pixel color
-            draw_rectangle(pos.0 as f32, pos.1 as f32, 1.0, 1.0, pixel.color);
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Pixel {
-    color: Color,
-    pixel_type: PixelType,
-}
-impl Pixel {
-    pub fn new(pixel_type: PixelType) -> Self {
-        let color = match pixel_type {
-            PixelType::Sand => BROWN,
-            PixelType::Water => BLUE,
-        };
-
-        Self { color, pixel_type }
-    }
-
-    pub fn sand() -> Self {
-        Self {
-            color: BROWN,
-            pixel_type: PixelType::Sand,
-        }
-    }
-
-    pub fn water() -> Self {
-        Self {
-            color: BLUE,
-            pixel_type: PixelType::Water,
-        }
-    }
-}
-#[derive(Clone, Copy)]
-pub enum PixelType {
-    Sand,
-    Water,
 }

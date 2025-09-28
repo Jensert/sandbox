@@ -1,6 +1,8 @@
 use macroquad::{main, prelude::*};
-mod lib;
-use lib::{App, window_settings};
+mod app;
+mod pixel;
+mod pixel_grid;
+use app::{App, window_settings};
 
 #[main(window_settings)]
 async fn main() {
