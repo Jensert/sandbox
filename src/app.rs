@@ -54,7 +54,7 @@ impl App {
         // Create camera which we use to draw the final texture.
         // This camera is essentially our screen, whereas the render_camera is the viewport
         // The render_camera is then scaled to our screen dimensions during drawing
-        let default_camera = Camera2D::from_display_rect(Rect {
+        let mut default_camera = Camera2D::from_display_rect(Rect {
             x: 0.0,
             y: 0.0,
             w: screen_width(), // this camera's viewport has the screen dimensions
@@ -83,6 +83,10 @@ impl App {
 
     pub fn selected_pixel(&self) -> PixelType {
         self.selected_pixel
+    }
+
+    pub fn reset_grid(&mut self) {
+        self.pixels_mut().reset();
     }
 
     fn handle_mouse_input(&mut self) {
@@ -153,8 +157,8 @@ impl App {
             WHITE,
             DrawTextureParams {
                 dest_size: Some(vec2(
-                    self.render_target.texture.width() * 4.0, // We multiply the texture's dimensions by 4
-                    self.render_target.texture.height() * 4.0, // Because the texture is a quarter of the size
+                    self.render_target.texture.width() * 16.0, // We multiply the texture's dimensions by 4
+                    self.render_target.texture.height() * 16.0, // Because the texture is a quarter of the size
                 )), // We should change this to dynamically multiply it by the ratio: screen / render target size
                 // The INITIAL sizes, not the scaled sizes after the camera projections
                 ..Default::default()
