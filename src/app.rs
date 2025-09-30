@@ -1,5 +1,5 @@
-use macroquad::prelude::*;
-use std::{collections::HashMap, ops::Deref};
+use macroquad::{prelude::*, rand::RandGenerator};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{pixel::PixelType, pixel_grid::PixelGrid};
 pub fn window_settings() -> Conf {
@@ -20,10 +20,23 @@ pub struct App {
 
     should_quit: bool,
     total_scroll: f32,
+    selected_pixel: PixelType,
 }
 impl App {
     pub fn new(render_size: (u32, u32)) -> Self {
-        let pixel_grid = PixelGrid::new(render_size);
+        // Create a seed and RNG
+        let rng = RandGenerator::new();
+        let mut seed = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_nanos()
+            .try_into()
+            .expect("Time went too fast");
+        seed = seed % 12345678;
+        rng.srand(seed);
+        println!("Started app with seed: {seed}");
+        // Create pixelgrid with the seed
+        let pixel_grid = PixelGrid::new(render_size, seed, rng);
         // Create the texture to which we will draw
         let render_target = render_target(render_size.0, render_size.1);
         // Set filter mode to nearest to prevent blurry pixels
@@ -55,6 +68,8 @@ impl App {
 
             should_quit: false,
             total_scroll: 0.0,
+
+            selected_pixel: PixelType::Sand,
         }
     }
 
@@ -74,7 +89,7 @@ impl App {
                 .round(); // Round world position to integer, to prevent pixels at half positions
             self.pixel_grid.grid_mut().insert(
                 (m_world_pos.x as u32, m_world_pos.y as u32),
-                PixelType::Sand,
+                self.selected_pixel,
             );
             println!("screen pos: {m_screen_pos:?}\nworld_pos: {m_world_pos:?}");
         }
@@ -86,6 +101,10 @@ impl App {
             if self.total_scroll >= 120.0 {
                 // scrolled up
                 scroll = self.total_scroll / 120.0;
+                for _ in 0..scroll as i32 {
+                    self.selected_pixel.next();
+                    println!("{:?}", self.selected_pixel);
+                }
                 self.total_scroll = 0.0;
             }
         } else if scroll < 0.0 {
@@ -93,6 +112,10 @@ impl App {
             if self.total_scroll <= -110.0 {
                 // scrolled down
                 scroll = self.total_scroll / 120.0;
+                for _ in 0..scroll.abs() as i32 {
+                    self.selected_pixel.previous();
+                    println!("{:?}", self.selected_pixel);
+                }
                 self.total_scroll = 0.0;
             }
         }
