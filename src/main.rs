@@ -10,7 +10,7 @@ use app::{App, window_settings};
 
 #[main(window_settings)]
 async fn main() {
-    let mut app = App::new((320, 180));
+    let mut app = App::new((80, 45));
     while app.running() {
         app.handle_input();
         app.start_drawing();
@@ -29,8 +29,8 @@ async fn main() {
                     format!("# Pixels: {}", app.pixels().grid().len()).as_str(),
                 );
                 ui.separator();
-                if ui.button(None, "Clear pixels") {
-                    app.pixels_mut().grid_mut().clear();
+                if ui.button(None, "Reset pixelgrid") {
+                    app.pixels_mut().reset();
                 }
                 ui.label(
                     None,

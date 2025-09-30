@@ -1,4 +1,4 @@
-use crate::pixel::{PixelType, draw_pixel};
+use crate::pixel::{Direction, PixelType, draw_pixel};
 use macroquad::{
     prelude::*,
     rand::{ChooseRandom, RandGenerator},
@@ -16,11 +16,14 @@ pub struct PixelGrid {
 }
 impl PixelGrid {
     pub fn new(size: (u32, u32), seed: u64, rng: RandGenerator) -> Self {
+        let mut grid = HashMap::new();
+        grid.insert((0, size.1 - 1), PixelType::Ant(Direction::Right, 1));
+        let last_updates = grid.clone();
         Self {
             width: size.0,
             height: size.1,
-            grid: HashMap::new(),
-            last_updates: HashMap::new(),
+            grid,
+            last_updates,
             seed,
             rng,
         }
@@ -38,6 +41,13 @@ impl PixelGrid {
 
     pub fn last_updates_mut(&mut self) -> &mut HashMap<(u32, u32), PixelType> {
         return &mut self.last_updates;
+    }
+
+    pub fn reset(&mut self) {
+        self.grid.clear();
+        self.grid
+            .insert((0, self.height - 1), PixelType::Ant(Direction::Right, 1));
+        self.last_updates = self.grid.clone();
     }
 
     pub fn update(&mut self) {
@@ -70,7 +80,6 @@ impl PixelGrid {
             self.last_updates
                 .insert(movement.new_position, movement.pixel_type); // And also insert it into the updated hashmap
         }
-        println!("{}", self.grid().len());
     }
 
     pub fn draw(&self) {
