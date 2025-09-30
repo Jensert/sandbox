@@ -2,11 +2,12 @@ use macroquad::{prelude::*, rand::RandGenerator};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{pixel::PixelType, pixel_grid::PixelGrid};
+
 pub fn window_settings() -> Conf {
     Conf {
         window_title: String::from("Sandbox"),
-        window_width: 640,
-        window_height: 360,
+        window_width: 1280,
+        window_height: 720,
         ..Default::default()
     }
 }
@@ -36,7 +37,7 @@ impl App {
         rng.srand(seed);
         println!("Started app with seed: {seed}");
         // Create pixelgrid with the seed
-        let pixel_grid = PixelGrid::new(render_size, seed, rng);
+        let mut pixel_grid = PixelGrid::new(render_size, seed, rng);
         // Create the texture to which we will draw
         let render_target = render_target(render_size.0, render_size.1);
         // Set filter mode to nearest to prevent blurry pixels
@@ -80,6 +81,10 @@ impl App {
         self.should_quit = true;
     }
 
+    pub fn selected_pixel(&self) -> PixelType {
+        self.selected_pixel
+    }
+
     fn handle_mouse_input(&mut self) {
         if is_mouse_button_down(MouseButton::Left) {
             let m_screen_pos = mouse_position(); // Get mouse position
@@ -91,7 +96,6 @@ impl App {
                 (m_world_pos.x as u32, m_world_pos.y as u32),
                 self.selected_pixel,
             );
-            println!("screen pos: {m_screen_pos:?}\nworld_pos: {m_world_pos:?}");
         }
 
         // Scroll wheel
@@ -124,6 +128,9 @@ impl App {
     fn handle_keyboard_input(&mut self) {
         if is_key_released(KeyCode::Escape) {
             self.quit();
+        }
+        if is_key_pressed(KeyCode::C) {
+            self.pixel_grid.grid_mut().clear();
         }
     }
 

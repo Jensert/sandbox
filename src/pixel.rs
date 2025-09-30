@@ -20,6 +20,13 @@ impl PixelType {
         }
     }
 
+    pub fn get(&self) -> &str {
+        match self {
+            PixelType::Sand => "Sand",
+            PixelType::Water => "Water",
+        }
+    }
+
     pub fn update(
         &self,
         pixel_grid: &PixelGrid,
