@@ -70,6 +70,7 @@ impl PixelGrid {
             self.last_updates
                 .insert(movement.new_position, movement.pixel_type); // And also insert it into the updated hashmap
         }
+        println!("{}", self.grid().len());
     }
 
     pub fn draw(&self) {
