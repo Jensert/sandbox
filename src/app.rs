@@ -1,19 +1,11 @@
 use macroquad::{prelude::*, rand::RandGenerator};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{pixel::PixelType, pixel_grid::PixelGrid};
-
-pub fn window_settings() -> Conf {
-    Conf {
-        window_title: String::from("Sandbox"),
-        window_width: 1280,
-        window_height: 720,
-        ..Default::default()
-    }
-}
-
+use crate::{brush::Brush, pixel::PixelType, pixel_grid::PixelGrid};
 pub struct App {
     render_size: (u32, u32),
+    render_ratio: (f32, f32),
+
     pixel_grid: PixelGrid,
     render_target: RenderTarget,
     render_camera: Camera2D,
@@ -21,10 +13,10 @@ pub struct App {
 
     should_quit: bool,
     total_scroll: f32,
-    selected_pixel: PixelType,
+    brush: Brush,
 }
 impl App {
-    pub fn new(render_size: (u32, u32)) -> Self {
+    pub fn new(render_size: (u32, u32), render_ratio: (f32, f32)) -> Self {
         // Create a seed and RNG
         let rng = RandGenerator::new();
         let mut seed = SystemTime::now()
@@ -37,7 +29,7 @@ impl App {
         rng.srand(seed);
         println!("Started app with seed: {seed}");
         // Create pixelgrid with the seed
-        let mut pixel_grid = PixelGrid::new(render_size, seed, rng);
+        let pixel_grid = PixelGrid::new(render_size, seed, rng);
         // Create the texture to which we will draw
         let render_target = render_target(render_size.0, render_size.1);
         // Set filter mode to nearest to prevent blurry pixels
@@ -54,7 +46,7 @@ impl App {
         // Create camera which we use to draw the final texture.
         // This camera is essentially our screen, whereas the render_camera is the viewport
         // The render_camera is then scaled to our screen dimensions during drawing
-        let mut default_camera = Camera2D::from_display_rect(Rect {
+        let default_camera = Camera2D::from_display_rect(Rect {
             x: 0.0,
             y: 0.0,
             w: screen_width(), // this camera's viewport has the screen dimensions
@@ -62,6 +54,8 @@ impl App {
         });
         Self {
             render_size,
+            render_ratio,
+
             pixel_grid,
             render_target,
             render_camera,
@@ -70,7 +64,7 @@ impl App {
             should_quit: false,
             total_scroll: 0.0,
 
-            selected_pixel: PixelType::Sand,
+            brush: Brush::new(),
         }
     }
 
@@ -81,48 +75,74 @@ impl App {
         self.should_quit = true;
     }
 
-    pub fn selected_pixel(&self) -> PixelType {
-        self.selected_pixel
+    pub fn brush(&self) -> Brush {
+        self.brush
+    }
+    pub fn brush_mut(&mut self) -> &mut Brush {
+        &mut self.brush
     }
 
     pub fn reset_grid(&mut self) {
         self.pixels_mut().reset();
     }
 
+    pub fn mouse_to_world(&self) -> Vec2 {
+        let m_screen_pos = mouse_position(); // Get mouse position
+        let m_world_pos = self
+            .render_camera
+            .screen_to_world(vec2(m_screen_pos.0, m_screen_pos.1)) // Transform mouse position to world space
+            .round(); // Round world position to integer, to prevent pixels at half positions
+        return m_world_pos;
+    }
+
     fn handle_mouse_input(&mut self) {
         if is_mouse_button_down(MouseButton::Left) {
-            let m_screen_pos = mouse_position(); // Get mouse position
-            let m_world_pos = self
-                .render_camera
-                .screen_to_world(vec2(m_screen_pos.0, m_screen_pos.1)) // Transform mouse position to world space
-                .round(); // Round world position to integer, to prevent pixels at half positions
-            self.pixel_grid.grid_mut().insert(
-                (m_world_pos.x as u32, m_world_pos.y as u32),
-                self.selected_pixel,
-            );
+            let world_position = self.mouse_to_world();
+            self.brush().draw(world_position, self.pixels_mut());
         }
 
-        // Scroll wheel
+        // Handle scrolling
+        // First we get the vertical scroll direction and the amount that is scrolled
         let mut scroll = mouse_wheel().1;
+        // First we check if we are scrolling up
         if scroll > 0.0 {
-            self.total_scroll += scroll;
+            self.total_scroll += scroll; // Add the total amount scrolled
+            // Once we scrolled 120.0 up (idk in what unit) we count it as '1 scroll'
             if self.total_scroll >= 120.0 {
-                // scrolled up
+                // We divide the total scroll by 120.0 to get the total scroll amount in single units
                 scroll = self.total_scroll / 120.0;
+                // We loop over how many times we have scrolled and do an action for every scroll
                 for _ in 0..scroll as i32 {
-                    self.selected_pixel.next();
-                    println!("{:?}", self.selected_pixel);
+                    if is_key_down(KeyCode::LeftShift) {
+                        self.brush_mut().brush_type_mut().next();
+                        continue;
+                    }
+
+                    if is_key_down(KeyCode::LeftAlt) {
+                        self.brush_mut().increase_size(1.0);
+                        continue;
+                    }
+                    self.brush_mut().pixel_type_mut().next();
                 }
                 self.total_scroll = 0.0;
             }
+            // Then we do that exact same thing but for scrolling down
         } else if scroll < 0.0 {
             self.total_scroll += scroll;
             if self.total_scroll <= -110.0 {
                 // scrolled down
                 scroll = self.total_scroll / 120.0;
                 for _ in 0..scroll.abs() as i32 {
-                    self.selected_pixel.previous();
-                    println!("{:?}", self.selected_pixel);
+                    if is_key_down(KeyCode::LeftShift) {
+                        self.brush_mut().brush_type_mut().previous();
+                        continue;
+                    }
+
+                    if is_key_down(KeyCode::LeftAlt) {
+                        self.brush_mut().decrease_size(1.0);
+                        continue;
+                    }
+                    self.brush_mut().pixel_type_mut().previous();
                 }
                 self.total_scroll = 0.0;
             }
@@ -157,8 +177,8 @@ impl App {
             WHITE,
             DrawTextureParams {
                 dest_size: Some(vec2(
-                    self.render_target.texture.width() * 16.0, // We multiply the texture's dimensions by 4
-                    self.render_target.texture.height() * 16.0, // Because the texture is a quarter of the size
+                    self.render_target.texture.width() * self.render_ratio.0, // We multiply the texture's dimensions by 4
+                    self.render_target.texture.height() * self.render_ratio.1, // Because the texture is a quarter of the size
                 )), // We should change this to dynamically multiply it by the ratio: screen / render target size
                 // The INITIAL sizes, not the scaled sizes after the camera projections
                 ..Default::default()
@@ -172,5 +192,9 @@ impl App {
 
     pub fn pixels_mut(&mut self) -> &mut PixelGrid {
         return &mut self.pixel_grid;
+    }
+
+    pub fn render_size(&self) -> (u32, u32) {
+        self.render_size
     }
 }
