@@ -5,42 +5,78 @@ use macroquad::{
 };
 use std::collections::HashMap;
 
-pub struct PixelGrid {
-    width: u32,
-    height: u32,
-    grid: HashMap<(u32, u32), PixelType>,
-    last_updates: HashMap<(u32, u32), PixelType>,
-
+pub struct ChunkGrid {
+    grid: HashMap<(i32, i32), Chunk>,
     _seed: u64,
     rng: RandGenerator,
 }
-impl PixelGrid {
-    pub fn new(size: (u32, u32), _seed: u64, rng: RandGenerator) -> Self {
-        let grid = HashMap::new();
-        let last_updates = grid.clone();
-        Self {
-            width: size.0,
-            height: size.1,
-            grid,
-            last_updates,
-            _seed,
-            rng,
-        }
-    }
-    pub fn grid(&self) -> &HashMap<(u32, u32), PixelType> {
-        return &self.grid;
-    }
-
-    pub fn grid_mut(&mut self) -> &mut HashMap<(u32, u32), PixelType> {
-        return &mut self.grid;
-    }
-
-    pub fn reset(&mut self) {
-        self.grid.clear();
-        self.last_updates = self.grid.clone();
+impl ChunkGrid {
+    pub fn new(chunk_size: (u32, u32), _seed: u64, rng: RandGenerator) -> Self {
+        let mut grid = HashMap::new();
+        grid.insert((0, 0), Chunk::new(chunk_size, _seed));
+        Self { grid, _seed, rng }
     }
 
     pub fn update(&mut self) {
+        for ((x, y), chunk) in self.grid.iter_mut() {
+            chunk.update(&self.rng);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        for ((_x, _y), chunk) in self.grid.iter_mut() {
+            chunk.clear();
+        }
+    }
+
+    pub fn get_total_pixels(&self) -> usize {
+        let mut res = 0;
+        for ((_, _), chunk) in self.grid.iter() {
+            res += chunk.chunk.len();
+        }
+        res
+    }
+
+    pub fn draw(&self) {
+        for ((_, _), chunk) in self.grid.iter() {
+            chunk.draw();
+        }
+    }
+
+    pub fn grid(&mut self) -> &mut HashMap<(i32, i32), Chunk> {
+        &mut self.grid
+    }
+}
+
+pub struct Chunk {
+    width: u32,
+    height: u32,
+    chunk: HashMap<(u32, u32), PixelType>,
+    last_updates: HashMap<(u32, u32), PixelType>,
+
+    _seed: u64,
+}
+impl Chunk {
+    pub fn new(size: (u32, u32), _seed: u64) -> Self {
+        let chunk = HashMap::new();
+        let last_updates = chunk.clone();
+        Self {
+            width: size.0,
+            height: size.1,
+            chunk,
+            last_updates,
+            _seed,
+        }
+    }
+    pub fn chunk(&self) -> &HashMap<(u32, u32), PixelType> {
+        return &self.chunk;
+    }
+
+    pub fn chunk_mut(&mut self) -> &mut HashMap<(u32, u32), PixelType> {
+        return &mut self.chunk;
+    }
+
+    pub fn update(&mut self, rng: &RandGenerator) {
         self.last_updates.clear();
         // We filter_map() the hashmap
         // First we match the PixelType to call the appropriate pixel update function
@@ -50,9 +86,9 @@ impl PixelGrid {
         // to update the hashmap
         ////Returns://////(Old X, Y)  (New X, Y)  Pixel to move
         let mut changes: Vec<GridMovement> = self
-            .grid()
+            .chunk()
             .iter()
-            .filter_map(|(&(x, y), &pixel_type)| pixel_type.update(self, x, y, &self.rng))
+            .filter_map(|(&(x, y), &pixel_type)| pixel_type.update(self, x, y, &rng))
             .collect();
         // Before we apply the changes we shuffle the changes vector, so that the updates are applied in random order
         // We do this to make it seem more natural and to prevent certain softlocks
@@ -65,8 +101,9 @@ impl PixelGrid {
             if self.last_updates.contains_key(&movement.new_position) {
                 continue;
             }
-            self.grid.remove(&movement.old_position); // First we remove the pixel from the key at the old position
-            self.grid.insert(movement.new_position, movement.pixel_type); // Then we insert that pixel into a new key
+            self.chunk.remove(&movement.old_position); // First we remove the pixel from the key at the old position
+            self.chunk
+                .insert(movement.new_position, movement.pixel_type); // Then we insert that pixel into a new key
             self.last_updates
                 .insert(movement.new_position, movement.pixel_type); // And also insert it into the updated hashmap
         }
@@ -74,7 +111,7 @@ impl PixelGrid {
 
     pub fn draw(&self) {
         // Here we loop over the pixel grid to draw all the pixels
-        for ((x, y), pixel_type) in &self.grid {
+        for ((x, y), pixel_type) in &self.chunk {
             // Capture the position and the pixel data
             // Draw rectangle for every entgry in the hashmap, at the position it is in, with the pixel color
             draw_pixel(*pixel_type, *x, *y);
@@ -90,7 +127,7 @@ impl PixelGrid {
             return GridQuery::OutOfBounds;
         }
         // If it is not out of bounds, check if there is a pixel in the position
-        match self.grid().get(&pos) {
+        match self.chunk().get(&pos) {
             // If there is no pixel, return GridQuery::None
             None => GridQuery::None,
             // If there is a pixel, return GridQuery::Hit(pixel data)
@@ -99,15 +136,16 @@ impl PixelGrid {
     }
 
     pub fn set(&mut self, pos: (u32, u32), pixel: PixelType) {
-        self.grid.insert(pos, pixel);
+        self.chunk.insert(pos, pixel);
     }
-
     pub fn width(&self) -> u32 {
         self.width
     }
-
     pub fn height(&self) -> u32 {
         self.height
+    }
+    pub fn clear(&mut self) {
+        self.chunk_mut().clear();
     }
 }
 

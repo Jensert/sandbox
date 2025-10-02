@@ -1,12 +1,17 @@
 use macroquad::{prelude::*, rand::RandGenerator};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{brush::Brush, pixel::PixelType, pixel_grid::PixelGrid};
+use crate::{
+    brush::Brush,
+    pixel::PixelType,
+    pixel_grid::{Chunk, ChunkGrid},
+};
 pub struct App {
     render_size: (u32, u32),
     render_ratio: (f32, f32),
+    chunk_size: (u32, u32),
 
-    pixel_grid: PixelGrid,
+    chunk_grid: ChunkGrid,
     render_target: RenderTarget,
     render_camera: Camera2D,
     default_camera: Camera2D,
@@ -16,7 +21,7 @@ pub struct App {
     brush: Brush,
 }
 impl App {
-    pub fn new(render_size: (u32, u32), render_ratio: (f32, f32)) -> Self {
+    pub fn new(render_size: (u32, u32), render_ratio: (f32, f32), chunk_size: (u32, u32)) -> Self {
         // Create a seed and RNG
         let rng = RandGenerator::new();
         let mut seed = SystemTime::now()
@@ -29,7 +34,7 @@ impl App {
         rng.srand(seed);
         println!("Started app with seed: {seed}");
         // Create pixelgrid with the seed
-        let pixel_grid = PixelGrid::new(render_size, seed, rng);
+        let chunk_grid = ChunkGrid::new(chunk_size, seed, rng);
         // Create the texture to which we will draw
         let render_target = render_target(render_size.0, render_size.1);
         // Set filter mode to nearest to prevent blurry pixels
@@ -55,8 +60,9 @@ impl App {
         Self {
             render_size,
             render_ratio,
+            chunk_size,
 
-            pixel_grid,
+            chunk_grid,
             render_target,
             render_camera,
             default_camera,
@@ -82,8 +88,8 @@ impl App {
         &mut self.brush
     }
 
-    pub fn reset_grid(&mut self) {
-        self.pixels_mut().reset();
+    pub fn reset(&mut self) {
+        self.chunk_grid_mut().clear();
     }
 
     pub fn mouse_to_world(&self) -> Vec2 {
@@ -95,10 +101,28 @@ impl App {
         return m_world_pos;
     }
 
+    pub fn world_to_chunk(&self, world_position: Vec2) -> ((i32, i32), (u32, u32)) {
+        let chunk_mult = (
+            (world_position.x / self.chunk_size.0 as f32),
+            (world_position.y / self.chunk_size.1 as f32),
+        );
+
+        let chunk_key = (chunk_mult.0 as i32, chunk_mult.1 as i32);
+        let chunk_coordinate = world_position * vec2(chunk_mult.0 as f32, chunk_mult.1 as f32);
+
+        return (
+            chunk_key,
+            (chunk_coordinate.x as u32, chunk_coordinate.y as u32),
+        );
+    }
+
     fn handle_mouse_input(&mut self) {
         if is_mouse_button_down(MouseButton::Left) {
             let world_position = self.mouse_to_world();
-            self.brush().draw(world_position, self.pixels_mut());
+            self.brush().draw(
+                world_position,
+                self.chunk_grid_mut().grid().get_mut(&(0, 0)).unwrap(),
+            );
         }
 
         // Handle scrolling
@@ -154,7 +178,7 @@ impl App {
             self.quit();
         }
         if is_key_pressed(KeyCode::C) {
-            self.pixel_grid.grid_mut().clear();
+            self.chunk_grid.clear();
         }
     }
 
@@ -186,12 +210,12 @@ impl App {
         );
     }
 
-    pub fn pixels(&self) -> &PixelGrid {
-        return &self.pixel_grid;
+    pub fn chunk_grid(&self) -> &ChunkGrid {
+        return &self.chunk_grid;
     }
 
-    pub fn pixels_mut(&mut self) -> &mut PixelGrid {
-        return &mut self.pixel_grid;
+    pub fn chunk_grid_mut(&mut self) -> &mut ChunkGrid {
+        return &mut self.chunk_grid;
     }
 
     pub fn render_size(&self) -> (u32, u32) {
