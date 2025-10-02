@@ -1,4 +1,4 @@
-use crate::pixel_grid::{GridMovement, PixelGrid};
+use crate::pixel_grid::{Chunk, GridMovement};
 use macroquad::{prelude::*, rand::RandGenerator};
 
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -41,7 +41,7 @@ impl PixelType {
 
     pub fn update(
         &self,
-        pixel_grid: &PixelGrid,
+        pixel_grid: &Chunk,
         x: u32,
         y: u32,
         rng: &RandGenerator,
@@ -56,7 +56,7 @@ impl PixelType {
     /// Returns a boolean indicating whether the pixel was correctly updated or not
     /// It was updated if the space below the current position was free
     /// if it was updated you should probably skip any oother updates in that same frame
-    pub fn apply_gravity(&self, pixel_grid: &PixelGrid, grid_movement: &mut GridMovement) -> bool {
+    pub fn apply_gravity(&self, pixel_grid: &Chunk, grid_movement: &mut GridMovement) -> bool {
         let check_position = (
             grid_movement.old_position.0,
             grid_movement.old_position.1 + 1,
@@ -70,7 +70,7 @@ impl PixelType {
 
     pub fn fall(
         &self,
-        pixel_grid: &PixelGrid,
+        pixel_grid: &Chunk,
         grid_movement: &mut GridMovement,
         direction: i8,
     ) -> bool {
@@ -120,7 +120,7 @@ impl PixelType {
 
     pub fn settle(
         &self,
-        pixel_grid: &PixelGrid,
+        pixel_grid: &Chunk,
         grid_movement: &mut GridMovement,
         direction: i8,
     ) -> bool {
@@ -185,7 +185,7 @@ pub fn draw_pixel(pixel_type: PixelType, x: u32, y: u32) {
 }
 
 pub fn update_sand(
-    pixel_grid: &PixelGrid,
+    pixel_grid: &Chunk,
     x: u32,
     y: u32,
     rng: &RandGenerator,
@@ -208,7 +208,7 @@ pub fn update_sand(
 }
 
 pub fn update_water(
-    pixel_grid: &PixelGrid,
+    pixel_grid: &Chunk,
     x: u32,
     y: u32,
     rng: &RandGenerator,
