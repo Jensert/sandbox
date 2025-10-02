@@ -1,6 +1,10 @@
 use macroquad::math::Vec2;
 
-use crate::{pixel::PixelType, pixel_grid::Chunk};
+use crate::{
+    CHUNK_SIZE,
+    pixel::PixelType,
+    pixel_grid::{Chunk, ChunkGrid},
+};
 
 #[derive(Clone, Copy)]
 pub enum BrushType {
@@ -44,35 +48,26 @@ impl Brush {
         }
     }
 
-    pub fn draw(&self, world_position: Vec2, pixel_grid: &mut Chunk) {
+    pub fn draw(&self, world_position: Vec2, chunk_grid: &mut ChunkGrid) {
         match self.brush_type {
-            BrushType::Pixel => self.draw_pixel(world_position, pixel_grid),
-            BrushType::Circle => self.draw_circle(self.brush_size, world_position, pixel_grid),
+            BrushType::Pixel => self.draw_pixel(world_position, chunk_grid),
+            BrushType::Circle => self.draw_circle(self.brush_size, world_position, chunk_grid),
         }
-        pixel_grid.chunk_mut().insert(
-            (world_position.x as u32, world_position.y as u32),
-            self.pixel_type,
-        );
     }
 
-    pub fn draw_pixel(&self, world_position: Vec2, pixel_grid: &mut Chunk) {
-        pixel_grid.chunk_mut().insert(
-            (world_position.x as u32, world_position.y as u32),
-            self.pixel_type,
-        );
+    pub fn draw_pixel(&self, world_position: Vec2, chunk_grid: &mut ChunkGrid) {
+        chunk_grid.insert_pixel(world_position, self.pixel_type())
     }
 
-    pub fn draw_circle(&self, radius: f32, center: Vec2, pixel_grid: &mut Chunk) {
+    pub fn draw_circle(&self, radius: f32, center: Vec2, chunk_grid: &mut ChunkGrid) {
         // Naive circle drawing
-        for y in 0..pixel_grid.height() {
+        for y in 0..CHUNK_SIZE.1 {
             let dy = y as f32 - center.y;
-            for x in 0..pixel_grid.width() {
+            for x in 0..CHUNK_SIZE.0 {
                 let dx = x as f32 - center.x;
                 let dist = (dx * dx + dy * dy).sqrt();
                 if dist <= radius - 1.0 as f32 {
-                    pixel_grid
-                        .chunk_mut()
-                        .insert((x as u32, y as u32), self.pixel_type);
+                    chunk_grid.insert_pixel(center, self.pixel_type());
                 }
             }
         }

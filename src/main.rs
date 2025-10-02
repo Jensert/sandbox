@@ -8,6 +8,7 @@ mod brush;
 mod pixel;
 mod pixel_grid;
 use app::App;
+use pixel_grid::ChunkPosition;
 
 pub fn window_settings() -> Conf {
     Conf {
@@ -18,22 +19,17 @@ pub fn window_settings() -> Conf {
     }
 }
 
+const CHUNK_SIZE: (u32, u32) = (160, 90);
+const RENDER_SIZE: (u32, u32) = (240, 125);
+
 #[main(window_settings)]
 async fn main() {
-    let render_width = 16 * 40;
-    let render_height = 9 * 40;
-    let chunk_width = 1920 / 4;
-    let chunk_height = 1080 / 4;
     let conf = window_settings();
     let initial_width = conf.window_width;
     let initial_height = conf.window_height;
-    let width_ratio = initial_width as f32 / render_width as f32;
-    let height_ratio = initial_height as f32 / render_height as f32;
-    let mut app = App::new(
-        (render_width as u32, render_height as u32),
-        (width_ratio, height_ratio),
-        (chunk_width, chunk_height),
-    );
+    let width_ratio = initial_width as f32 / RENDER_SIZE.0 as f32;
+    let height_ratio = initial_height as f32 / RENDER_SIZE.1 as f32;
+    let mut app = App::new((width_ratio, height_ratio));
     while app.running() {
         app.handle_input();
         app.start_drawing();
@@ -73,11 +69,12 @@ async fn main() {
                     None,
                     format!("Mouse world position: {:?}", app.mouse_to_world()).as_str(),
                 );
+                let position = ChunkPosition::from_world_position(app.mouse_to_world());
                 ui.label(
                     None,
                     format!(
-                        "Mouse chunk position: {:?}",
-                        app.world_to_chunk(app.mouse_to_world())
+                        "Mouse chunk position: {:?}, {:?}",
+                        position.chunk_key, position.chunk_coordinate
                     )
                     .as_str(),
                 );

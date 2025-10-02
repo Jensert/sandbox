@@ -1,19 +1,55 @@
-use crate::pixel::{PixelType, draw_pixel};
+use crate::{
+    CHUNK_SIZE,
+    pixel::{PixelType, draw_pixel},
+};
 use macroquad::{
     prelude::*,
     rand::{ChooseRandom, RandGenerator},
 };
 use std::collections::HashMap;
 
+#[derive(Debug)]
+pub struct ChunkPosition {
+    pub chunk_key: (i32, i32),
+    pub chunk_coordinate: (u32, u32),
+}
+
+impl ChunkPosition {
+    pub fn new(chunk_key: (i32, i32), chunk_coordinate: (u32, u32)) -> Self {
+        Self {
+            chunk_key,
+            chunk_coordinate,
+        }
+    }
+
+    pub fn from_world_position(world_position: Vec2) -> ChunkPosition {
+        let (wx, wy) = (world_position.x as i32, world_position.y as i32);
+
+        let cx = wx.div_euclid(CHUNK_SIZE.0 as i32);
+        let cy = wy.div_euclid(CHUNK_SIZE.1 as i32);
+
+        let lx = wx.rem_euclid(CHUNK_SIZE.0 as i32) as u32;
+        let ly = wy.rem_euclid(CHUNK_SIZE.1 as i32) as u32;
+
+        Self {
+            chunk_key: (cx, cy),
+            chunk_coordinate: (lx, ly),
+        }
+    }
+}
 pub struct ChunkGrid {
     grid: HashMap<(i32, i32), Chunk>,
     _seed: u64,
     rng: RandGenerator,
 }
+
 impl ChunkGrid {
-    pub fn new(chunk_size: (u32, u32), _seed: u64, rng: RandGenerator) -> Self {
+    pub fn new(_seed: u64, rng: RandGenerator) -> Self {
         let mut grid = HashMap::new();
-        grid.insert((0, 0), Chunk::new(chunk_size, _seed));
+        grid.insert((0, 0), Chunk::new(CHUNK_SIZE, _seed));
+        grid.insert((0, 1), Chunk::new(CHUNK_SIZE, _seed));
+        grid.insert((1, 0), Chunk::new(CHUNK_SIZE, _seed));
+        grid.insert((1, 1), Chunk::new(CHUNK_SIZE, _seed));
         Self { grid, _seed, rng }
     }
 
@@ -45,6 +81,15 @@ impl ChunkGrid {
 
     pub fn grid(&mut self) -> &mut HashMap<(i32, i32), Chunk> {
         &mut self.grid
+    }
+
+    pub fn insert_pixel(&mut self, world_position: Vec2, pixel_type: PixelType) {
+        let chunk_position = ChunkPosition::from_world_position(world_position);
+        self.grid
+            .get_mut(&chunk_position.chunk_key)
+            .unwrap()
+            .chunk_mut()
+            .insert(chunk_position.chunk_coordinate, pixel_type);
     }
 }
 

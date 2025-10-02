@@ -2,14 +2,13 @@ use macroquad::{prelude::*, rand::RandGenerator};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{
+    CHUNK_SIZE, RENDER_SIZE,
     brush::Brush,
     pixel::PixelType,
     pixel_grid::{Chunk, ChunkGrid},
 };
 pub struct App {
-    render_size: (u32, u32),
     render_ratio: (f32, f32),
-    chunk_size: (u32, u32),
 
     chunk_grid: ChunkGrid,
     render_target: RenderTarget,
@@ -21,7 +20,7 @@ pub struct App {
     brush: Brush,
 }
 impl App {
-    pub fn new(render_size: (u32, u32), render_ratio: (f32, f32), chunk_size: (u32, u32)) -> Self {
+    pub fn new(render_ratio: (f32, f32)) -> Self {
         // Create a seed and RNG
         let rng = RandGenerator::new();
         let mut seed = SystemTime::now()
@@ -34,17 +33,17 @@ impl App {
         rng.srand(seed);
         println!("Started app with seed: {seed}");
         // Create pixelgrid with the seed
-        let chunk_grid = ChunkGrid::new(chunk_size, seed, rng);
+        let chunk_grid = ChunkGrid::new(seed, rng);
         // Create the texture to which we will draw
-        let render_target = render_target(render_size.0, render_size.1);
+        let render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
         // Set filter mode to nearest to prevent blurry pixels
         render_target.texture.set_filter(FilterMode::Nearest);
         // Create the camera which we use to render. The render target is attached to this camera
         let mut render_camera = Camera2D::from_display_rect(Rect {
             x: 0.0,
             y: 0.0,
-            w: render_size.0 as f32, // this camera's viewport has the render dimensions
-            h: render_size.1 as f32,
+            w: RENDER_SIZE.0 as f32, // this camera's viewport has the render dimensions
+            h: RENDER_SIZE.1 as f32,
         });
         // Attach render target to this camera
         render_camera.render_target = Some(render_target.clone());
@@ -58,9 +57,7 @@ impl App {
             h: screen_height(),
         });
         Self {
-            render_size,
             render_ratio,
-            chunk_size,
 
             chunk_grid,
             render_target,
@@ -100,29 +97,10 @@ impl App {
             .round(); // Round world position to integer, to prevent pixels at half positions
         return m_world_pos;
     }
-
-    pub fn world_to_chunk(&self, world_position: Vec2) -> ((i32, i32), (u32, u32)) {
-        let chunk_mult = (
-            (world_position.x / self.chunk_size.0 as f32),
-            (world_position.y / self.chunk_size.1 as f32),
-        );
-
-        let chunk_key = (chunk_mult.0 as i32, chunk_mult.1 as i32);
-        let chunk_coordinate = world_position * vec2(chunk_mult.0 as f32, chunk_mult.1 as f32);
-
-        return (
-            chunk_key,
-            (chunk_coordinate.x as u32, chunk_coordinate.y as u32),
-        );
-    }
-
     fn handle_mouse_input(&mut self) {
         if is_mouse_button_down(MouseButton::Left) {
             let world_position = self.mouse_to_world();
-            self.brush().draw(
-                world_position,
-                self.chunk_grid_mut().grid().get_mut(&(0, 0)).unwrap(),
-            );
+            self.brush().draw(world_position, self.chunk_grid_mut());
         }
 
         // Handle scrolling
@@ -216,9 +194,5 @@ impl App {
 
     pub fn chunk_grid_mut(&mut self) -> &mut ChunkGrid {
         return &mut self.chunk_grid;
-    }
-
-    pub fn render_size(&self) -> (u32, u32) {
-        self.render_size
     }
 }
