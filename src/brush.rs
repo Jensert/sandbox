@@ -1,4 +1,4 @@
-use macroquad::math::Vec2;
+use macroquad::math::{Vec2, vec2};
 
 use crate::{
     CHUNK_SIZE,
@@ -42,9 +42,9 @@ pub struct Brush {
 impl Brush {
     pub fn new() -> Self {
         Self {
-            pixel_type: PixelType::Sand,
-            brush_type: BrushType::Circle,
-            brush_size: 1.0,
+            pixel_type: PixelType::Dirt,
+            brush_type: BrushType::Pixel,
+            brush_size: 5.0,
         }
     }
 
@@ -56,7 +56,14 @@ impl Brush {
     }
 
     pub fn draw_pixel(&self, world_position: Vec2, chunk_grid: &mut ChunkGrid) {
-        chunk_grid.insert_pixel(world_position, self.pixel_type())
+        let mut pos = world_position;
+        for y in 0..self.brush_size as i32 {
+            let dy = pos.y + y as f32;
+            for x in 0..self.brush_size as i32 {
+                let dx = pos.x + x as f32;
+                chunk_grid.insert_pixel(vec2(dx, dy), self.pixel_type())
+            }
+        }
     }
 
     pub fn draw_circle(&self, radius: f32, center: Vec2, chunk_grid: &mut ChunkGrid) {

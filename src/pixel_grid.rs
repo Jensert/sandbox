@@ -196,6 +196,8 @@ impl Chunk {
                 // if it is, push to the cross_movement vector
                 movement.set_chunk_keys(self.key);
                 self.chunk.remove(&movement.old_position); // First we remove the pixel from the key at the old position
+                // Push the movement to the cross_chunk vector
+                // which will be returned to the parent ChunkGrid
                 cross_chunk_movements.push(movement);
                 continue;
             }
