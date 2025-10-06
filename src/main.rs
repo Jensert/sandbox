@@ -19,7 +19,7 @@ pub fn window_settings() -> Conf {
     }
 }
 
-const CHUNK_SIZE: (u32, u32) = (160, 90);
+const CHUNK_SIZE: (i32, i32) = (160, 90);
 const RENDER_SIZE: (u32, u32) = (240, 125);
 
 #[main(window_settings)]
@@ -35,7 +35,7 @@ async fn main() {
         app.start_drawing();
         clear_background(SKYBLUE);
 
-        app.chunk_grid().draw();
+        app.chunks().draw();
 
         widgets::Window::new(hash!(), vec2(0.0, 0.0), vec2(300.0, 300.0))
             .label("Info")
@@ -45,11 +45,11 @@ async fn main() {
                 ui.label(None, format!("FPS: {}", get_fps()).as_str());
                 ui.label(
                     None,
-                    format!("# Pixels: {}", app.chunk_grid().get_total_pixels()).as_str(),
+                    format!("# Pixels: {}", app.chunks().get_total_pixels()).as_str(),
                 );
                 ui.separator();
                 if ui.button(None, "Reset pixelgrid") {
-                    app.chunk_grid_mut().clear();
+                    app.chunks_mut().clear();
                 }
                 ui.label(
                     None,
@@ -82,7 +82,7 @@ async fn main() {
 
         app.stop_drawing();
 
-        app.chunk_grid_mut().update();
+        app.chunks_mut().update();
 
         next_frame().await;
     }

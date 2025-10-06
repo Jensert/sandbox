@@ -33,7 +33,7 @@ impl App {
         rng.srand(seed);
         println!("Started app with seed: {seed}");
         // Create pixelgrid with the seed
-        let chunk_grid = ChunkGrid::new(seed, rng);
+        let chunk_grid = ChunkGrid::new(seed.try_into().unwrap(), rng);
         // Create the texture to which we will draw
         let render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
         // Set filter mode to nearest to prevent blurry pixels
@@ -86,7 +86,7 @@ impl App {
     }
 
     pub fn reset(&mut self) {
-        self.chunk_grid_mut().clear();
+        self.chunks_mut().clear();
     }
 
     pub fn mouse_to_world(&self) -> Vec2 {
@@ -100,7 +100,7 @@ impl App {
     fn handle_mouse_input(&mut self) {
         if is_mouse_button_down(MouseButton::Left) {
             let world_position = self.mouse_to_world();
-            self.brush().draw(world_position, self.chunk_grid_mut());
+            self.brush().draw(world_position, self.chunks_mut());
         }
 
         // Handle scrolling
@@ -188,11 +188,11 @@ impl App {
         );
     }
 
-    pub fn chunk_grid(&self) -> &ChunkGrid {
+    pub fn chunks(&self) -> &ChunkGrid {
         return &self.chunk_grid;
     }
 
-    pub fn chunk_grid_mut(&mut self) -> &mut ChunkGrid {
+    pub fn chunks_mut(&mut self) -> &mut ChunkGrid {
         return &mut self.chunk_grid;
     }
 }

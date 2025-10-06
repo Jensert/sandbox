@@ -42,8 +42,8 @@ impl PixelType {
     pub fn update(
         &self,
         pixel_grid: &Chunk,
-        x: u32,
-        y: u32,
+        x: i32,
+        y: i32,
         rng: &RandGenerator,
     ) -> Option<GridMovement> {
         match self {
@@ -170,7 +170,7 @@ impl PixelType {
     }
 }
 
-pub fn draw_pixel(pixel_type: PixelType, x: u32, y: u32) {
+pub fn draw_pixel(pixel_type: PixelType, x: i32, y: i32) {
     let x = x as f32;
     let y = y as f32;
     let w = 1.0;
@@ -186,8 +186,8 @@ pub fn draw_pixel(pixel_type: PixelType, x: u32, y: u32) {
 
 pub fn update_sand(
     pixel_grid: &Chunk,
-    x: u32,
-    y: u32,
+    x: i32,
+    y: i32,
     rng: &RandGenerator,
 ) -> Option<GridMovement> {
     let old_position = (x, y);
@@ -209,8 +209,8 @@ pub fn update_sand(
 
 pub fn update_water(
     pixel_grid: &Chunk,
-    x: u32,
-    y: u32,
+    x: i32,
+    y: i32,
     rng: &RandGenerator,
 ) -> Option<GridMovement> {
     let old_position = (x, y);

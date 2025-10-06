@@ -11,11 +11,11 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct ChunkPosition {
     pub chunk_key: (i32, i32),
-    pub chunk_coordinate: (u32, u32),
+    pub chunk_coordinate: (i32, i32),
 }
 
 impl ChunkPosition {
-    pub fn new(chunk_key: (i32, i32), chunk_coordinate: (u32, u32)) -> Self {
+    pub fn new(chunk_key: (i32, i32), chunk_coordinate: (i32, i32)) -> Self {
         Self {
             chunk_key,
             chunk_coordinate,
@@ -28,8 +28,8 @@ impl ChunkPosition {
         let cx = wx.div_euclid(CHUNK_SIZE.0 as i32);
         let cy = wy.div_euclid(CHUNK_SIZE.1 as i32);
 
-        let lx = wx.rem_euclid(CHUNK_SIZE.0 as i32) as u32;
-        let ly = wy.rem_euclid(CHUNK_SIZE.1 as i32) as u32;
+        let lx = wx.rem_euclid(CHUNK_SIZE.0 as i32);
+        let ly = wy.rem_euclid(CHUNK_SIZE.1 as i32);
 
         Self {
             chunk_key: (cx, cy),
@@ -46,16 +46,40 @@ pub struct ChunkGrid {
 impl ChunkGrid {
     pub fn new(_seed: u64, rng: RandGenerator) -> Self {
         let mut grid = HashMap::new();
-        grid.insert((0, 0), Chunk::new(CHUNK_SIZE, _seed));
-        grid.insert((0, 1), Chunk::new(CHUNK_SIZE, _seed));
-        grid.insert((1, 0), Chunk::new(CHUNK_SIZE, _seed));
-        grid.insert((1, 1), Chunk::new(CHUNK_SIZE, _seed));
+        grid.insert((0, 0), Chunk::new(CHUNK_SIZE, _seed, (0, 0)));
+        grid.insert((0, 1), Chunk::new(CHUNK_SIZE, _seed, (0, 1)));
+        grid.insert((1, 0), Chunk::new(CHUNK_SIZE, _seed, (1, 0)));
+        grid.insert((1, 1), Chunk::new(CHUNK_SIZE, _seed, (1, 1)));
         Self { grid, _seed, rng }
     }
 
     pub fn update(&mut self) {
+        // Updating should be multiple stages:
+        // First: apply all in-chunk movements
+        // Second: get all cross-chunk movements for each chunk
+        // Third: apply all cross-chunk movements
+        let mut cross_chunk_movements: Vec<Vec<GridMovement>> = vec![];
         for ((x, y), chunk) in self.grid.iter_mut() {
-            chunk.update(&self.rng);
+            cross_chunk_movements.push(chunk.update(&self.rng)); // Update all in-chunk movements and return all crosschunk movements
+        }
+
+        // Apply all cross chunk movements
+        for chunk in cross_chunk_movements {
+            for movement in chunk {
+                match movement.new_chunk {
+                    None => {
+                        println!("chunk key not set! skipping movement");
+                    }
+                    Some(chunk_key) => {
+                        let chunk = self.grid.get_mut(&chunk_key).unwrap();
+                        if chunk.get(movement.new_position).is_free() {
+                            chunk.set(movement.new_position, movement.pixel_type);
+                        } else {
+                        }
+                    }
+                }
+                if self.is_free(movement) {}
+            }
         }
     }
 
@@ -74,8 +98,8 @@ impl ChunkGrid {
     }
 
     pub fn draw(&self) {
-        for ((_, _), chunk) in self.grid.iter() {
-            chunk.draw();
+        for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
+            chunk.draw(*chunk_key_x, *chunk_key_y);
         }
     }
 
@@ -91,37 +115,59 @@ impl ChunkGrid {
             .chunk_mut()
             .insert(chunk_position.chunk_coordinate, pixel_type);
     }
+
+    pub fn is_free(&self, grid_movement: GridMovement) -> bool {
+        match grid_movement.new_chunk {
+            None => {
+                println!("chunk key not set! skipping movement");
+                false
+            }
+            Some(chunk_key) => {
+                let chunk = self.grid.get(&chunk_key).unwrap();
+                if chunk.get(grid_movement.new_position).is_free() {
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+    }
 }
 
 pub struct Chunk {
-    width: u32,
-    height: u32,
-    chunk: HashMap<(u32, u32), PixelType>,
-    last_updates: HashMap<(u32, u32), PixelType>,
+    width: i32,
+    height: i32,
+    key: (i32, i32),
+    chunk: HashMap<(i32, i32), PixelType>,
+    last_updates: HashMap<(i32, i32), PixelType>,
 
     _seed: u64,
 }
 impl Chunk {
-    pub fn new(size: (u32, u32), _seed: u64) -> Self {
+    pub fn new(size: (i32, i32), _seed: u64, key: (i32, i32)) -> Self {
         let chunk = HashMap::new();
         let last_updates = chunk.clone();
         Self {
             width: size.0,
             height: size.1,
+            key,
             chunk,
             last_updates,
             _seed,
         }
     }
-    pub fn chunk(&self) -> &HashMap<(u32, u32), PixelType> {
+    pub fn chunk(&self) -> &HashMap<(i32, i32), PixelType> {
         return &self.chunk;
     }
 
-    pub fn chunk_mut(&mut self) -> &mut HashMap<(u32, u32), PixelType> {
+    pub fn chunk_mut(&mut self) -> &mut HashMap<(i32, i32), PixelType> {
         return &mut self.chunk;
     }
 
-    pub fn update(&mut self, rng: &RandGenerator) {
+    /// The update function returns a vector of cross gridmovements. The return type is only used
+    /// by the parent struct ChunkGrid to handle cross chunk movements.
+    /// All mvoements in-chunk are handled by the chunk itself in their update function
+    pub fn update(&mut self, rng: &RandGenerator) -> Vec<GridMovement> {
         self.last_updates.clear();
         // We filter_map() the hashmap
         // First we match the PixelType to call the appropriate pixel update function
@@ -139,10 +185,21 @@ impl Chunk {
         // We do this to make it seem more natural and to prevent certain softlocks
         changes.shuffle();
         // Here we loop over the changes vector and apply all modifications in the grid hashmap
+        // First we check if the new position is out of bounds and should move to a different chunk
         // We also check if the new position is already been occupied in a previous move byh another pixel
         // We do this to prevent 2 pixels moving into the same space in 1 move, which would cause this to overwrite
         // the pixel
-        for movement in changes {
+        let mut cross_chunk_movements = vec![];
+        for mut movement in changes {
+            // Check if the movement is out of bounds
+            if movement.out_of_bounds() {
+                // if it is, push to the cross_movement vector
+                movement.set_chunk_keys(self.key);
+                self.chunk.remove(&movement.old_position); // First we remove the pixel from the key at the old position
+                cross_chunk_movements.push(movement);
+                continue;
+            }
+            // Skip update if the new position is already updated this frame
             if self.last_updates.contains_key(&movement.new_position) {
                 continue;
             }
@@ -152,18 +209,23 @@ impl Chunk {
             self.last_updates
                 .insert(movement.new_position, movement.pixel_type); // And also insert it into the updated hashmap
         }
+        // Return an empty vector for now
+
+        cross_chunk_movements
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, chunk_key_x: i32, chunk_key_y: i32) {
+        let chunk_x = chunk_key_x * CHUNK_SIZE.0;
+        let chunk_y = chunk_key_y * CHUNK_SIZE.1;
         // Here we loop over the pixel grid to draw all the pixels
         for ((x, y), pixel_type) in &self.chunk {
             // Capture the position and the pixel data
             // Draw rectangle for every entgry in the hashmap, at the position it is in, with the pixel color
-            draw_pixel(*pixel_type, *x, *y);
+            draw_pixel(*pixel_type, chunk_x + *x, chunk_y + *y);
         }
     }
 
-    pub fn get(&self, pos: (u32, u32)) -> GridQuery {
+    pub fn get(&self, pos: (i32, i32)) -> GridQuery {
         // First check if the position is out of bounds
         if pos.1 >= self.height() || pos.1 <= 0 {
             return GridQuery::OutOfBounds;
@@ -180,13 +242,13 @@ impl Chunk {
         }
     }
 
-    pub fn set(&mut self, pos: (u32, u32), pixel: PixelType) {
+    pub fn set(&mut self, pos: (i32, i32), pixel: PixelType) {
         self.chunk.insert(pos, pixel);
     }
-    pub fn width(&self) -> u32 {
+    pub fn width(&self) -> i32 {
         self.width
     }
-    pub fn height(&self) -> u32 {
+    pub fn height(&self) -> i32 {
         self.height
     }
     pub fn clear(&mut self) {
@@ -203,7 +265,7 @@ pub enum GridQuery {
 impl GridQuery {
     pub fn is_free(&self) -> bool {
         match self {
-            GridQuery::OutOfBounds => false,
+            GridQuery::OutOfBounds => true,
             GridQuery::Hit(_) => false,
             GridQuery::None => true,
         }
@@ -211,16 +273,57 @@ impl GridQuery {
 }
 
 pub struct GridMovement {
-    pub old_position: (u32, u32),
-    pub new_position: (u32, u32),
+    pub old_position: (i32, i32),
+    pub new_position: (i32, i32),
+    pub old_chunk: Option<(i32, i32)>,
+    pub new_chunk: Option<(i32, i32)>,
     pub pixel_type: PixelType,
 }
 impl GridMovement {
-    pub fn new(old_position: (u32, u32), new_position: (u32, u32), pixel_type: PixelType) -> Self {
+    pub fn new(old_position: (i32, i32), new_position: (i32, i32), pixel_type: PixelType) -> Self {
         Self {
             old_position,
             new_position,
+            old_chunk: None,
+            new_chunk: None,
             pixel_type,
+        }
+    }
+
+    pub fn out_of_bounds(&self) -> bool {
+        if self.new_position.0 >= CHUNK_SIZE.0 {
+            return true;
+        }
+        if self.new_position.1 >= CHUNK_SIZE.1 {
+            return true;
+        }
+        return false;
+    }
+
+    pub fn set_chunk_keys(&mut self, current_chunk_key: (i32, i32)) {
+        self.old_chunk = Some(current_chunk_key);
+        if !self.out_of_bounds() {
+            self.new_chunk = self.old_chunk;
+        } else {
+            let mut new_chunk = current_chunk_key;
+            if self.new_position.0 > CHUNK_SIZE.0 {
+                new_chunk.0 += 1;
+                self.new_position.0 -= CHUNK_SIZE.0;
+            }
+            if self.new_position.0 < 0 {
+                new_chunk.0 -= 1;
+                self.new_position.0 = CHUNK_SIZE.0 - self.new_position.0;
+            }
+            if self.new_position.1 > CHUNK_SIZE.1 {
+                new_chunk.1 += 1;
+                self.new_position.1 -= CHUNK_SIZE.1;
+                println!("TEST");
+            }
+            if self.new_position.1 < 0 {
+                new_chunk.1 -= 1;
+                self.new_position.1 = CHUNK_SIZE.1 - self.new_position.1;
+            }
+            self.new_chunk = Some(new_chunk);
         }
     }
 }
