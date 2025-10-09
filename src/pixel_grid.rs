@@ -71,14 +71,25 @@ impl ChunkGrid {
                         println!("chunk key not set! skipping movement");
                     }
                     Some(chunk_key) => {
-                        let chunk = self.grid.get_mut(&chunk_key).unwrap();
-                        if chunk.get(movement.new_position).is_free() {
-                            chunk.set(movement.new_position, movement.pixel_type);
-                        } else {
+                        if self.is_free(&movement) {
+                            // We have to remove the pixel from the old position here
+
+                            let old_chunk = self
+                                .grid
+                                .get_mut(&movement.old_chunk.unwrap())
+                                .expect(format!("Expected a chunk at {:?}", chunk_key).as_str());
+                            old_chunk.chunk_mut().remove(&movement.old_position);
+                            let chunk = self
+                                .grid
+                                .get_mut(&chunk_key)
+                                .expect(format!("Expected a chunk at {:?}", chunk_key).as_str());
+                            if chunk.get(movement.new_position).is_free() {
+                                chunk.set(movement.new_position, movement.pixel_type);
+                            } else {
+                            }
                         }
                     }
                 }
-                if self.is_free(movement) {}
             }
         }
     }
@@ -116,18 +127,48 @@ impl ChunkGrid {
             .insert(chunk_position.chunk_coordinate, pixel_type);
     }
 
-    pub fn is_free(&self, grid_movement: GridMovement) -> bool {
+    /// Check if the grid position (world position) is free, chunk-wide
+    /// This requires the supplied GridMovement struct to have a chunk key
+    /// and a chunk coordinate
+    /// It then checks the coordinate within that chunk if it is free
+    pub fn is_free(&self, grid_movement: &GridMovement) -> bool {
         match grid_movement.new_chunk {
             None => {
                 println!("chunk key not set! skipping movement");
                 false
             }
             Some(chunk_key) => {
-                let chunk = self.grid.get(&chunk_key).unwrap();
+                let chunk = self
+                    .grid
+                    .get(&chunk_key)
+                    .expect(format!("Expected a chunk at {:?}", chunk_key).as_str());
                 if chunk.get(grid_movement.new_position).is_free() {
                     true
                 } else {
                     false
+                }
+            }
+        }
+    }
+
+    /// Does the same check as is_free(). It checks the chunk coordinate
+    /// if it is free. But this returns the chunk if it is free.
+    /// Can be used to directly insert into the chunk that is checked.
+    pub fn get_chunk_if_free(&self, grid_movement: &GridMovement) -> Option<&Chunk> {
+        match grid_movement.new_chunk {
+            None => {
+                println!("chunk key not set! skipping movement");
+                None
+            }
+            Some(chunk_key) => {
+                let chunk = self
+                    .grid
+                    .get(&chunk_key)
+                    .expect(format!("Expected a chunk at {:?}", chunk_key).as_str());
+                if chunk.get(grid_movement.new_position).is_free() {
+                    Some(&chunk)
+                } else {
+                    None
                 }
             }
         }
@@ -195,7 +236,7 @@ impl Chunk {
             if movement.out_of_bounds() {
                 // if it is, push to the cross_movement vector
                 movement.set_chunk_keys(self.key);
-                self.chunk.remove(&movement.old_position); // First we remove the pixel from the key at the old position
+                //self.chunk.remove(&movement.old_position); // First we remove the pixel from the key at the old position
                 // Push the movement to the cross_chunk vector
                 // which will be returned to the parent ChunkGrid
                 cross_chunk_movements.push(movement);
@@ -229,7 +270,7 @@ impl Chunk {
 
     pub fn get(&self, pos: (i32, i32)) -> GridQuery {
         // First check if the position is out of bounds
-        if pos.1 >= self.height() || pos.1 <= 0 {
+        if pos.1 >= self.height() || pos.1 < 0 {
             return GridQuery::OutOfBounds;
         }
         if pos.0 >= self.width() || pos.0 < 0 {
@@ -293,10 +334,10 @@ impl GridMovement {
     }
 
     pub fn out_of_bounds(&self) -> bool {
-        if self.new_position.0 >= CHUNK_SIZE.0 {
+        if self.new_position.0 >= CHUNK_SIZE.0 || self.new_position.0 < 0 {
             return true;
         }
-        if self.new_position.1 >= CHUNK_SIZE.1 {
+        if self.new_position.1 >= CHUNK_SIZE.1 || self.new_position.1 < 0 {
             return true;
         }
         return false;
@@ -308,22 +349,26 @@ impl GridMovement {
             self.new_chunk = self.old_chunk;
         } else {
             let mut new_chunk = current_chunk_key;
-            if self.new_position.0 > CHUNK_SIZE.0 {
+
+            // X Axis
+            if self.new_position.0 >= CHUNK_SIZE.0 {
                 new_chunk.0 += 1;
                 self.new_position.0 -= CHUNK_SIZE.0;
             }
             if self.new_position.0 < 0 {
                 new_chunk.0 -= 1;
-                self.new_position.0 = CHUNK_SIZE.0 - self.new_position.0;
+                self.new_position.0 += CHUNK_SIZE.0;
             }
-            if self.new_position.1 > CHUNK_SIZE.1 {
+
+            // Y axis
+            if self.new_position.1 >= CHUNK_SIZE.1 {
                 new_chunk.1 += 1;
                 self.new_position.1 -= CHUNK_SIZE.1;
                 println!("TEST");
             }
             if self.new_position.1 < 0 {
                 new_chunk.1 -= 1;
-                self.new_position.1 = CHUNK_SIZE.1 - self.new_position.1;
+                self.new_position.1 += CHUNK_SIZE.1;
             }
             self.new_chunk = Some(new_chunk);
         }
