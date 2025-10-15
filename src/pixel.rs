@@ -43,6 +43,22 @@ impl PixelType {
         }
     }
 
+    pub fn to_color(&self) -> Color {
+        match self {
+            PixelType::Sand => BEIGE,
+            PixelType::Water => BLUE,
+            PixelType::Dirt => DARKBROWN,
+            PixelType::Stone => GRAY,
+            PixelType::Grass => DARKGREEN,
+            PixelType::Air => Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+        }
+    }
+
     pub fn update(
         &self,
         chunk: &Chunk,

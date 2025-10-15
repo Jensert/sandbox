@@ -99,6 +99,15 @@ impl ChunkGrid {
                 }
             }
         }
+
+        // Update texture
+        self.update_texture();
+    }
+
+    pub fn update_texture(&mut self) {
+        for ((_, _), chunk) in self.grid.iter_mut() {
+            chunk.update_texture();
+        }
     }
 
     pub fn clear(&mut self) {
@@ -195,18 +204,38 @@ pub struct Chunk {
     chunk: Vec<PixelType>,
     last_updates: HashMap<(i32, i32), PixelType>,
 
+    texture: Texture2D,
+
     _seed: u64,
 }
 impl Chunk {
     pub fn new(size: (usize, usize), _seed: u64, key: (i32, i32)) -> Self {
         let chunk = vec![PixelType::Air; CHUNK_SIZE.0 as usize * CHUNK_SIZE.1 as usize];
         let last_updates = HashMap::new();
+
+        let image = Image::gen_image_color(
+            CHUNK_SIZE.0 as u16,
+            CHUNK_SIZE.1 as u16,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+        );
+
+        let texture = Texture2D::from_image(&image);
+        texture.set_filter(FilterMode::Nearest);
+
         Self {
             width: size.0 as i32,
             height: size.1 as i32,
             key,
             chunk,
             last_updates,
+
+            texture,
+
             _seed,
         }
     }
@@ -278,9 +307,45 @@ impl Chunk {
         cross_chunk_movements
     }
 
+    pub fn update_texture(&mut self) {
+        let mut image = Image::gen_image_color(
+            CHUNK_SIZE.0 as u16,
+            CHUNK_SIZE.1 as u16,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+        );
+
+        for y in 0..CHUNK_SIZE.1 {
+            for x in 0..CHUNK_SIZE.0 {
+                if let Some(pixel_type) = self.get(x as i32, y as i32) {
+                    let color = pixel_type.to_color();
+                    image.set_pixel(x as u32, y as u32, color);
+                }
+            }
+        }
+
+        self.texture.update(&image);
+    }
+
     pub fn draw(&self, chunk_key_x: i32, chunk_key_y: i32) {
         let chunk_x = chunk_key_x * CHUNK_SIZE.0 as i32;
         let chunk_y = chunk_key_y * CHUNK_SIZE.1 as i32;
+
+        draw_texture_ex(
+            &self.texture,
+            chunk_x as f32,
+            chunk_y as f32,
+            WHITE,
+            DrawTextureParams {
+                ..Default::default()
+            },
+        );
+
+        /*
         // Here we loop over the pixel grid to draw all the pixels
         for y in 0..CHUNK_SIZE.1 {
             for x in 0..CHUNK_SIZE.0 {
@@ -290,6 +355,7 @@ impl Chunk {
                 }
             }
         }
+        */
     }
 
     pub fn query(&self, x: i32, y: i32) -> GridQuery {
