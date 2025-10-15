@@ -5,6 +5,7 @@ use macroquad::{prelude::*, rand::RandGenerator};
 pub enum PixelType {
     Sand,
     Water,
+    Air,
     Dirt,
     Stone,
     Grass,
@@ -17,6 +18,7 @@ impl PixelType {
             PixelType::Dirt => *self = PixelType::Stone,
             PixelType::Stone => *self = PixelType::Grass,
             PixelType::Grass => *self = PixelType::Sand,
+            _ => (),
         }
     }
     pub fn previous(&mut self) {
@@ -26,6 +28,7 @@ impl PixelType {
             PixelType::Stone => *self = PixelType::Dirt,
             PixelType::Dirt => *self = PixelType::Water,
             PixelType::Water => *self = PixelType::Sand,
+            _ => (),
         }
     }
 
@@ -36,19 +39,20 @@ impl PixelType {
             PixelType::Dirt => "Dirt",
             PixelType::Stone => "Stone",
             PixelType::Grass => "Grass",
+            PixelType::Air => "Air",
         }
     }
 
     pub fn update(
         &self,
-        pixel_grid: &Chunk,
+        chunk: &Chunk,
         x: i32,
         y: i32,
         rng: &RandGenerator,
     ) -> Option<GridMovement> {
         match self {
-            PixelType::Sand => update_sand(pixel_grid, x, y, rng),
-            PixelType::Water => update_water(pixel_grid, x, y, rng),
+            PixelType::Sand => update_sand(chunk, x, y, rng),
+            PixelType::Water => update_water(chunk, x, y, rng),
             _ => None,
         }
     }
@@ -61,7 +65,10 @@ impl PixelType {
             grid_movement.old_position.0,
             grid_movement.old_position.1 + 1,
         );
-        if pixel_grid.get(check_position).is_free() {
+        if pixel_grid
+            .query(check_position.0, check_position.1)
+            .is_free()
+        {
             grid_movement.new_position.1 = check_position.1;
             return true;
         }
@@ -80,7 +87,10 @@ impl PixelType {
                 grid_movement.old_position.0 + 1,
                 grid_movement.old_position.1 + 1,
             );
-            if pixel_grid.get(check_position).is_free() {
+            if pixel_grid
+                .query(check_position.0, check_position.1)
+                .is_free()
+            {
                 grid_movement.new_position = check_position;
                 return true;
             }
@@ -90,7 +100,10 @@ impl PixelType {
                 grid_movement.old_position.0 - 1,
                 grid_movement.old_position.1 + 1,
             );
-            if pixel_grid.get(check_position).is_free() {
+            if pixel_grid
+                .query(check_position.0, check_position.1)
+                .is_free()
+            {
                 grid_movement.new_position = check_position;
                 return true;
             }
@@ -100,7 +113,10 @@ impl PixelType {
                 grid_movement.old_position.0 - 1,
                 grid_movement.old_position.1 + 1,
             );
-            if pixel_grid.get(check_position).is_free() {
+            if pixel_grid
+                .query(check_position.0, check_position.1)
+                .is_free()
+            {
                 grid_movement.new_position = check_position;
                 return true;
             }
@@ -110,7 +126,10 @@ impl PixelType {
                 grid_movement.old_position.0 + 1,
                 grid_movement.old_position.1 + 1,
             );
-            if pixel_grid.get(check_position).is_free() {
+            if pixel_grid
+                .query(check_position.0, check_position.1)
+                .is_free()
+            {
                 grid_movement.new_position = check_position;
                 return true;
             }
@@ -131,7 +150,10 @@ impl PixelType {
                 grid_movement.old_position.0 + 1,
                 grid_movement.old_position.1,
             );
-            if pixel_grid.get(check_position).is_free() {
+            if pixel_grid
+                .query(check_position.0, check_position.1)
+                .is_free()
+            {
                 grid_movement.new_position = check_position;
                 return true;
             }
@@ -141,7 +163,10 @@ impl PixelType {
                 grid_movement.old_position.0 - 1,
                 grid_movement.old_position.1,
             );
-            if pixel_grid.get(check_position).is_free() {
+            if pixel_grid
+                .query(check_position.0, check_position.1)
+                .is_free()
+            {
                 grid_movement.new_position = check_position;
                 return true;
             }
@@ -151,7 +176,10 @@ impl PixelType {
                 grid_movement.old_position.0 - 1,
                 grid_movement.old_position.1,
             );
-            if pixel_grid.get(check_position).is_free() {
+            if pixel_grid
+                .query(check_position.0, check_position.1)
+                .is_free()
+            {
                 grid_movement.new_position = check_position;
                 return true;
             }
@@ -161,7 +189,10 @@ impl PixelType {
                 grid_movement.old_position.0 + 1,
                 grid_movement.old_position.1,
             );
-            if pixel_grid.get(check_position).is_free() {
+            if pixel_grid
+                .query(check_position.0, check_position.1)
+                .is_free()
+            {
                 grid_movement.new_position = check_position;
                 return true;
             }
@@ -181,6 +212,18 @@ pub fn draw_pixel(pixel_type: PixelType, x: i32, y: i32) {
         PixelType::Dirt => draw_rectangle(x, y, w, h, DARKBROWN),
         PixelType::Stone => draw_rectangle(x, y, w, h, GRAY),
         PixelType::Grass => draw_rectangle(x, y, w, h, DARKGREEN),
+        PixelType::Air => draw_rectangle(
+            x,
+            y,
+            w,
+            h,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+        ),
     }
 }
 

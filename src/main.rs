@@ -19,7 +19,7 @@ pub fn window_settings() -> Conf {
     }
 }
 
-const CHUNK_SIZE: (i32, i32) = (160, 90);
+const CHUNK_SIZE: (usize, usize) = (160, 90);
 const RENDER_SIZE: (u32, u32) = (240, 125);
 
 #[main(window_settings)]
