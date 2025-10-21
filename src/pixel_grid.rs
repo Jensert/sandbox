@@ -307,6 +307,9 @@ impl Chunk {
         cross_chunk_movements
     }
 
+    /// Update the chunks texture
+    /// Currently this is called every frame.
+    /// Should probably only be called if there is a change in the chunk
     pub fn update_texture(&mut self) {
         let mut image = Image::gen_image_color(
             CHUNK_SIZE.0 as u16,
@@ -331,6 +334,8 @@ impl Chunk {
         self.texture.update(&image);
     }
 
+    /// Draw the chunk's texture to the screen in the appropriate coordinates
+    /// The chunk key are transformed to screen coordinates
     pub fn draw(&self, chunk_key_x: i32, chunk_key_y: i32) {
         let chunk_x = chunk_key_x * CHUNK_SIZE.0 as i32;
         let chunk_y = chunk_key_y * CHUNK_SIZE.1 as i32;
