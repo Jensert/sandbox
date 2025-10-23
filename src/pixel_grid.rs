@@ -99,12 +99,9 @@ impl ChunkGrid {
                 }
             }
         }
-
-        // Update texture
-        self.update_texture();
     }
 
-    pub fn update_texture(&mut self) {
+    pub fn update_all_textures(&mut self) {
         for ((_, _), chunk) in self.grid.iter_mut() {
             chunk.update_texture();
         }
@@ -205,6 +202,7 @@ pub struct Chunk {
     last_updates: HashMap<(i32, i32), PixelType>,
 
     texture: Texture2D,
+    updated_last_frame: bool,
 
     _seed: u64,
 }
@@ -235,6 +233,7 @@ impl Chunk {
             last_updates,
 
             texture,
+            updated_last_frame: false,
 
             _seed,
         }
@@ -269,42 +268,56 @@ impl Chunk {
                 }
             }
         }
-        // Before we apply the changes we shuffle the changes vector, so that the updates are applied in random order
-        // We do this to make it seem more natural and to prevent certain softlocks
-        changes.shuffle();
-        // Here we loop over the changes vector and apply all modifications in the grid hashmap
-        // First we check if the new position is out of bounds and should move to a different chunk
-        // We also check if the new position is already been occupied in a previous move byh another pixel
-        // We do this to prevent 2 pixels moving into the same space in 1 move, which would cause this to overwrite
-        // the pixel
-        let mut cross_chunk_movements = vec![];
-        for mut movement in changes {
-            // Check if the movement is out of bounds
-            if movement.out_of_bounds() {
-                // if it is, push to the cross_movement vector
-                movement.set_chunk_keys(self.key);
-                //self.chunk.remove(&movement.old_position); // First we remove the pixel from the key at the old position
-                // Push the movement to the cross_chunk vector
-                // which will be returned to the parent ChunkGrid
-                cross_chunk_movements.push(movement);
-                continue;
-            }
-            // Skip update if the new position is already updated this frame
-            if self.last_updates.contains_key(&movement.new_position) {
-                continue;
-            }
-            self.remove(movement.old_position.0, movement.old_position.1); // First we remove the pixel from the key at the old position
-            self.set(
-                movement.new_position.0,
-                movement.new_position.1,
-                movement.pixel_type,
-            ); // Then we insert that pixel into a new key
-            self.last_updates
-                .insert(movement.new_position, movement.pixel_type); // And also insert it into the updated hashmap
-        }
-        // Return an empty vector for now
 
-        cross_chunk_movements
+        // If no changes happened this frame, dont do anything
+        if changes.is_empty() {
+            if self.updated_last_frame {
+                self.update_texture();
+            }
+            self.updated_last_frame = false;
+            return vec![]; // return empty vector
+        } else {
+            // Apply chanches if there are any
+            self.updated_last_frame = true;
+            // Before we apply the changes we shuffle the changes vector, so that the updates are applied in random order
+            // We do this to make it seem more natural and to prevent certain softlocks
+            changes.shuffle();
+            // Here we loop over the changes vector and apply all modifications in the grid hashmap
+            // First we check if the new position is out of bounds and should move to a different chunk
+            // We also check if the new position is already been occupied in a previous move byh another pixel
+            // We do this to prevent 2 pixels moving into the same space in 1 move, which would cause this to overwrite
+            // the pixel
+            let mut cross_chunk_movements = vec![];
+            for mut movement in changes {
+                // Check if the movement is out of bounds
+                if movement.out_of_bounds() {
+                    // if it is, push to the cross_movement vector
+                    movement.set_chunk_keys(self.key);
+                    //self.chunk.remove(&movement.old_position); // First we remove the pixel from the key at the old position
+                    // Push the movement to the cross_chunk vector
+                    // which will be returned to the parent ChunkGrid
+                    cross_chunk_movements.push(movement);
+                    continue;
+                }
+                // Skip update if the new position is already updated this frame
+                if self.last_updates.contains_key(&movement.new_position) {
+                    continue;
+                }
+                self.remove(movement.old_position.0, movement.old_position.1); // First we remove the pixel from the key at the old position
+                self.set(
+                    movement.new_position.0,
+                    movement.new_position.1,
+                    movement.pixel_type,
+                ); // Then we insert that pixel into a new key
+                self.last_updates
+                    .insert(movement.new_position, movement.pixel_type); // And also insert it into the updated hashmap
+            }
+
+            self.update_texture(); // Update the texture to apply the changes visually
+            // Return an empty vector for now
+
+            cross_chunk_movements
+        }
     }
 
     /// Update the chunks texture
@@ -392,6 +405,7 @@ impl Chunk {
     pub fn set(&mut self, x: i32, y: i32, pixel: PixelType) {
         let index = Chunk::index(x, y);
         self.chunk[index] = pixel;
+        self.updated_last_frame = true;
     }
     pub fn remove(&mut self, x: i32, y: i32) -> PixelType {
         let index = Chunk::index(x, y);
