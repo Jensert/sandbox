@@ -484,7 +484,6 @@ impl GridMovement {
         if y >= CHUNK_SIZE.1 as i32 {
             new_chunk.1 += 1;
             y -= CHUNK_SIZE.1 as i32;
-            println!("TEST");
         }
         if y < 0 {
             new_chunk.1 -= 1;
