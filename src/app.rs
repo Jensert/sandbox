@@ -1,5 +1,4 @@
 use macroquad::{prelude::*, rand::RandGenerator};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{RENDER_SIZE, brush::Brush, pixelgrid::ChunkGrid};
 pub struct App {

@@ -3,7 +3,7 @@ use macroquad::{
     rand::RandGenerator,
 };
 
-use crate::{CHUNK_SIZE, pixel::Pixel, pixelgrid::ChunkGrid, pixeltype::PixelType};
+use crate::{CHUNK_SIZE, pixelgrid::ChunkGrid, pixeltype::PixelType};
 
 #[derive(Clone, Copy)]
 pub enum BrushType {

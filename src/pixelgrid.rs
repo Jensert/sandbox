@@ -3,7 +3,7 @@ use macroquad::{
     prelude::*,
     rand::{ChooseRandom, RandGenerator},
 };
-use std::{collections::HashMap, io::Empty};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct ChunkPosition {
@@ -196,7 +196,7 @@ pub struct Chunk {
     updated_last_frame: bool,
 }
 impl Chunk {
-    pub fn new(size: (usize, usize), rng: &RandGenerator, key: (i32, i32)) -> Self {
+    pub fn new(size: (usize, usize), _rng: &RandGenerator, key: (i32, i32)) -> Self {
         let chunk = vec![Pixel::empty(); CHUNK_SIZE.0 as usize * CHUNK_SIZE.1 as usize];
         let last_updates = HashMap::new();
 

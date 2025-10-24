@@ -1,10 +1,7 @@
-use macroquad::{
-    color::{BEIGE, BLUE, Color, DARKBROWN, DARKGREEN, GRAY},
-    rand::RandGenerator,
-};
+use macroquad::{color::Color, rand::RandGenerator};
 
 use crate::{
-    pixel::{Pixel, update_sand, update_water},
+    pixel::Pixel,
     pixelgrid::{Chunk, GridMovement},
 };
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -87,20 +84,6 @@ impl PixelType {
 
     pub fn to_pixel(&self, rng: &RandGenerator) -> Pixel {
         Pixel::from_pixel_type(*self, rng)
-    }
-
-    pub fn update(
-        &self,
-        chunk: &Chunk,
-        x: i32,
-        y: i32,
-        rng: &RandGenerator,
-    ) -> Option<GridMovement> {
-        match self {
-            PixelType::Sand => update_sand(chunk, x, y, rng),
-            PixelType::Water => update_water(chunk, x, y, rng),
-            _ => None,
-        }
     }
 
     /// Returns a boolean indicating whether the pixel was correctly updated or not
