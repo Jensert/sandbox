@@ -46,7 +46,7 @@ pub fn update_sand(
     let new_position = old_position;
     let pixel = PixelType::Sand.to_pixel();
 
-    let mut grid_movement = GridMovement::new(old_position, new_position, pixel);
+    let mut grid_movement = GridMovement::new(old_position, new_position);
 
     if pixel
         .pixel_type
@@ -75,7 +75,7 @@ pub fn update_water(
     let new_position = old_position;
     let pixel = PixelType::Water.to_pixel();
 
-    let mut grid_movement = GridMovement::new(old_position, new_position, pixel);
+    let mut grid_movement = GridMovement::new(old_position, new_position);
 
     if pixel
         .pixel_type

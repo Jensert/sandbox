@@ -68,14 +68,17 @@ impl ChunkGrid {
                         println!("chunk key not set! skipping movement");
                     }
                     Some(chunk_key) => {
+                        // We have to remove the pixel from the old position here
                         if self.is_free(&movement) {
-                            // We have to remove the pixel from the old position here
-
+                            // Get the old chunk where the pixel has to be removed
                             let old_chunk = self
                                 .grid
                                 .get_mut(&movement.old_chunk.unwrap())
                                 .expect(format!("Expected a chunk at {:?}", chunk_key).as_str());
-                            old_chunk.remove(movement.old_position.0, movement.old_position.1);
+                            // Get the pixel from the old chunk
+                            let pixel =
+                                old_chunk.remove(movement.old_position.0, movement.old_position.1);
+                            // Get the new chunk where the pixel should move
                             let chunk = self
                                 .grid
                                 .get_mut(&chunk_key)
@@ -84,11 +87,8 @@ impl ChunkGrid {
                                 .query(movement.new_position.0, movement.new_position.1)
                                 .is_free()
                             {
-                                chunk.set(
-                                    movement.new_position.0,
-                                    movement.new_position.1,
-                                    movement.pixel,
-                                );
+                                // Set the pixel in the new chunk
+                                chunk.set(movement.new_position.0, movement.new_position.1, pixel);
                             } else {
                             }
                         }
@@ -289,14 +289,9 @@ impl Chunk {
                 if self.last_updates.contains_key(&movement.new_position) {
                     continue;
                 }
-                self.remove(movement.old_position.0, movement.old_position.1); // First we remove the pixel from the key at the old position
-                self.set(
-                    movement.new_position.0,
-                    movement.new_position.1,
-                    movement.pixel,
-                ); // Then we insert that pixel into a new key
-                self.last_updates
-                    .insert(movement.new_position, movement.pixel); // And also insert it into the updated hashmap
+                let pixel = self.remove(movement.old_position.0, movement.old_position.1); // First we remove the pixel from the key at the old position
+                self.set(movement.new_position.0, movement.new_position.1, pixel); // Then we insert that pixel into a new key
+                self.last_updates.insert(movement.new_position, pixel); // And also insert it into the updated hashmap
             }
 
             self.update_texture(); // Update the texture to apply the changes visually
@@ -435,16 +430,14 @@ pub struct GridMovement {
     pub new_position: (i32, i32),
     pub old_chunk: Option<(i32, i32)>,
     pub new_chunk: Option<(i32, i32)>,
-    pub pixel: Pixel,
 }
 impl GridMovement {
-    pub fn new(old_position: (i32, i32), new_position: (i32, i32), pixel: Pixel) -> Self {
+    pub fn new(old_position: (i32, i32), new_position: (i32, i32)) -> Self {
         Self {
             old_position,
             new_position,
             old_chunk: None,
             new_chunk: None,
-            pixel,
         }
     }
 
