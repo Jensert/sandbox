@@ -1,6 +1,9 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use macroquad::{
     main,
     prelude::*,
+    rand::RandGenerator,
     ui::{hash, root_ui, widgets},
 };
 mod app;
@@ -30,9 +33,21 @@ async fn main() {
     let initial_height = conf.window_height;
     let width_ratio = initial_width as f32 / RENDER_SIZE.0 as f32;
     let height_ratio = initial_height as f32 / RENDER_SIZE.1 as f32;
-    let mut app = App::new((width_ratio, height_ratio));
+    // Create a seed and RNG
+    let rng = RandGenerator::new();
+    let mut seed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_nanos()
+        .try_into()
+        .expect("Time went too fast");
+    seed = seed % 12345678;
+    rng.srand(seed);
+    let mut app = App::new((width_ratio, height_ratio), &rng);
+    println!("Started app with seed: {seed}");
+    // Create pixelgrid with the seed
     while app.running() {
-        app.handle_input();
+        app.handle_input(&rng);
         app.start_drawing();
         clear_background(SKYBLUE);
 
@@ -83,7 +98,7 @@ async fn main() {
 
         app.stop_drawing();
 
-        app.chunks_mut().update();
+        app.chunks_mut().update(&rng);
 
         next_frame().await;
     }

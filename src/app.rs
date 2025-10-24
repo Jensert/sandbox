@@ -15,20 +15,8 @@ pub struct App {
     brush: Brush,
 }
 impl App {
-    pub fn new(render_ratio: (f32, f32)) -> Self {
-        // Create a seed and RNG
-        let rng = RandGenerator::new();
-        let mut seed = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards")
-            .as_nanos()
-            .try_into()
-            .expect("Time went too fast");
-        seed = seed % 12345678;
-        rng.srand(seed);
-        println!("Started app with seed: {seed}");
-        // Create pixelgrid with the seed
-        let chunk_grid = ChunkGrid::new(seed.try_into().unwrap(), rng);
+    pub fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
+        let chunk_grid = ChunkGrid::new(rng);
         // Create the texture to which we will draw
         let render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
         // Set filter mode to nearest to prevent blurry pixels
@@ -88,10 +76,10 @@ impl App {
             .round(); // Round world position to integer, to prevent pixels at half positions
         return m_world_pos;
     }
-    fn handle_mouse_input(&mut self) {
+    fn handle_mouse_input(&mut self, rng: &RandGenerator) {
         if is_mouse_button_down(MouseButton::Left) {
             let world_position = self.mouse_to_world();
-            self.brush().draw(world_position, self.chunks_mut());
+            self.brush().draw(world_position, self.chunks_mut(), rng);
         }
 
         // Handle scrolling
@@ -151,8 +139,8 @@ impl App {
         }
     }
 
-    pub fn handle_input(&mut self) {
-        self.handle_mouse_input();
+    pub fn handle_input(&mut self, rng: &RandGenerator) {
+        self.handle_mouse_input(rng);
         self.handle_keyboard_input();
     }
 

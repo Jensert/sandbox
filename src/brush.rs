@@ -1,6 +1,9 @@
-use macroquad::math::{Vec2, vec2};
+use macroquad::{
+    math::{Vec2, vec2},
+    rand::RandGenerator,
+};
 
-use crate::{CHUNK_SIZE, pixelgrid::ChunkGrid, pixeltype::PixelType};
+use crate::{CHUNK_SIZE, pixel::Pixel, pixelgrid::ChunkGrid, pixeltype::PixelType};
 
 #[derive(Clone, Copy)]
 pub enum BrushType {
@@ -44,24 +47,35 @@ impl Brush {
         }
     }
 
-    pub fn draw(&self, world_position: Vec2, chunk_grid: &mut ChunkGrid) {
+    pub fn draw(&self, world_position: Vec2, chunk_grid: &mut ChunkGrid, rng: &RandGenerator) {
         match self.brush_type {
-            BrushType::Pixel => self.draw_pixel(world_position, chunk_grid),
-            BrushType::Circle => self.draw_circle(self.brush_size, world_position, chunk_grid),
+            BrushType::Pixel => self.draw_pixel(world_position, chunk_grid, rng),
+            BrushType::Circle => self.draw_circle(self.brush_size, world_position, chunk_grid, rng),
         }
     }
 
-    pub fn draw_pixel(&self, world_position: Vec2, chunk_grid: &mut ChunkGrid) {
+    pub fn draw_pixel(
+        &self,
+        world_position: Vec2,
+        chunk_grid: &mut ChunkGrid,
+        rng: &RandGenerator,
+    ) {
         for y in 0..self.brush_size as i32 {
             let dy = world_position.y + y as f32;
             for x in 0..self.brush_size as i32 {
                 let dx = world_position.x + x as f32;
-                chunk_grid.set_pixel(vec2(dx, dy), self.pixel_type().to_pixel())
+                chunk_grid.set_pixel(vec2(dx, dy), self.pixel_type().to_pixel(rng))
             }
         }
     }
 
-    pub fn draw_circle(&self, radius: f32, center: Vec2, chunk_grid: &mut ChunkGrid) {
+    pub fn draw_circle(
+        &self,
+        radius: f32,
+        center: Vec2,
+        chunk_grid: &mut ChunkGrid,
+        rng: &RandGenerator,
+    ) {
         // Naive circle drawing
         for y in 0..CHUNK_SIZE.1 {
             let dy = y as f32 - center.y;
@@ -69,7 +83,7 @@ impl Brush {
                 let dx = x as f32 - center.x;
                 let dist = (dx * dx + dy * dy).sqrt();
                 if dist <= radius - 1.0 as f32 {
-                    chunk_grid.set_pixel(center, self.pixel_type().to_pixel());
+                    chunk_grid.set_pixel(center, self.pixel_type().to_pixel(rng));
                 }
             }
         }

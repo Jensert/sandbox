@@ -9,10 +9,23 @@ pub struct Pixel {
     temperature: i32,
 }
 impl Pixel {
-    pub fn from_pixel_type(pixel_type: PixelType) -> Self {
+    pub fn empty() -> Self {
+        Pixel {
+            pixel_type: PixelType::Air,
+            color: Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+            temperature: 1,
+        }
+    }
+    pub fn from_pixel_type(pixel_type: PixelType, rng: &RandGenerator) -> Self {
+        let color = pixel_type.to_color_shade(rng);
         Self {
             pixel_type,
-            color: WHITE,
+            color,
             temperature: 1,
         }
     }
@@ -34,6 +47,10 @@ impl Pixel {
             _ => None,
         }
     }
+
+    pub fn color(&self) -> Color {
+        self.color
+    }
 }
 
 pub fn update_sand(
@@ -44,22 +61,16 @@ pub fn update_sand(
 ) -> Option<GridMovement> {
     let old_position = (x, y);
     let new_position = old_position;
-    let pixel = PixelType::Sand.to_pixel();
+    let pixel_type = PixelType::Sand;
 
     let mut grid_movement = GridMovement::new(old_position, new_position);
 
-    if pixel
-        .pixel_type
-        .apply_gravity(pixel_grid, &mut grid_movement)
-    {
+    if pixel_type.apply_gravity(pixel_grid, &mut grid_movement) {
         return Some(grid_movement);
     }
 
     let direction = rng.gen_range(0, 2);
-    if pixel
-        .pixel_type
-        .fall(pixel_grid, &mut grid_movement, direction)
-    {
+    if pixel_type.fall(pixel_grid, &mut grid_movement, direction) {
         return Some(grid_movement);
     }
     return None;
@@ -73,29 +84,20 @@ pub fn update_water(
 ) -> Option<GridMovement> {
     let old_position = (x, y);
     let new_position = old_position;
-    let pixel = PixelType::Water.to_pixel();
+    let pixel_type = PixelType::Water;
 
     let mut grid_movement = GridMovement::new(old_position, new_position);
 
-    if pixel
-        .pixel_type
-        .apply_gravity(pixel_grid, &mut grid_movement)
-    {
+    if pixel_type.apply_gravity(pixel_grid, &mut grid_movement) {
         return Some(grid_movement);
     }
 
     let direction = rng.gen_range(0, 2);
-    if pixel
-        .pixel_type
-        .fall(pixel_grid, &mut grid_movement, direction)
-    {
+    if pixel_type.fall(pixel_grid, &mut grid_movement, direction) {
         return Some(grid_movement);
     }
 
-    if pixel
-        .pixel_type
-        .settle(pixel_grid, &mut grid_movement, direction)
-    {
+    if pixel_type.settle(pixel_grid, &mut grid_movement, direction) {
         return Some(grid_movement);
     }
 

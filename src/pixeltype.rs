@@ -49,13 +49,33 @@ impl PixelType {
         }
     }
 
-    pub fn to_color(&self) -> Color {
+    // pub fn to_color(&self) -> Color {
+    //     match self {
+    //         PixelType::Sand => Color::new(0.83, 0.69, 0.51, 1.00), // Beige
+    //         PixelType::Water => Color::new(0.00, 0.47, 0.95, 1.00), // Blue
+    //         PixelType::Dirt => Color::new(0.30, 0.25, 0.18, 1.00), // Darkbrown
+    //         PixelType::Stone => Color::new(0.51, 0.51, 0.51, 1.00), // Gray
+    //         PixelType::Grass => Color::new(0.00, 0.46, 0.17, 1.00), // Dark green
+    //         PixelType::Air => Color {
+    //             r: 0.0,
+    //             g: 0.0,
+    //             b: 0.0,
+    //             a: 0.0,
+    //         },
+    //     }
+    // }
+    pub fn to_color_shade(&self, rng: &RandGenerator) -> Color {
         match self {
-            PixelType::Sand => BEIGE,
-            PixelType::Water => BLUE,
-            PixelType::Dirt => DARKBROWN,
-            PixelType::Stone => GRAY,
-            PixelType::Grass => DARKGREEN,
+            PixelType::Sand => Color::new(rng.gen_range(0.7, 0.9), 0.69, 0.51, 1.00), // Beige
+            PixelType::Water => Color::new(0.00, 0.47, rng.gen_range(0.89, 0.99), 1.00), // Blue
+            PixelType::Dirt => Color::new(rng.gen_range(0.25, 0.35), 0.25, 0.18, 1.00), // Darkbrown
+            PixelType::Stone => Color::new(
+                rng.gen_range(0.48, 0.53),
+                rng.gen_range(0.48, 0.53),
+                rng.gen_range(0.48, 0.53),
+                1.00,
+            ), // Gray
+            PixelType::Grass => Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
             PixelType::Air => Color {
                 r: 0.0,
                 g: 0.0,
@@ -65,8 +85,8 @@ impl PixelType {
         }
     }
 
-    pub fn to_pixel(&self) -> Pixel {
-        Pixel::from_pixel_type(*self)
+    pub fn to_pixel(&self, rng: &RandGenerator) -> Pixel {
+        Pixel::from_pixel_type(*self, rng)
     }
 
     pub fn update(

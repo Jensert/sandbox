@@ -3,7 +3,7 @@ use macroquad::{
     prelude::*,
     rand::{ChooseRandom, RandGenerator},
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Empty};
 
 #[derive(Debug)]
 pub struct ChunkPosition {
@@ -36,28 +36,26 @@ impl ChunkPosition {
 }
 pub struct ChunkGrid {
     grid: HashMap<(i32, i32), Chunk>,
-    _seed: u64,
-    rng: RandGenerator,
 }
 
 impl ChunkGrid {
-    pub fn new(_seed: u64, rng: RandGenerator) -> Self {
+    pub fn new(rng: &RandGenerator) -> Self {
         let mut grid = HashMap::new();
-        grid.insert((0, 0), Chunk::new(CHUNK_SIZE, _seed, (0, 0)));
-        grid.insert((0, 1), Chunk::new(CHUNK_SIZE, _seed, (0, 1)));
-        grid.insert((1, 0), Chunk::new(CHUNK_SIZE, _seed, (1, 0)));
-        grid.insert((1, 1), Chunk::new(CHUNK_SIZE, _seed, (1, 1)));
-        Self { grid, _seed, rng }
+        grid.insert((0, 0), Chunk::new(CHUNK_SIZE, rng, (0, 0)));
+        grid.insert((0, 1), Chunk::new(CHUNK_SIZE, rng, (0, 1)));
+        grid.insert((1, 0), Chunk::new(CHUNK_SIZE, rng, (1, 0)));
+        grid.insert((1, 1), Chunk::new(CHUNK_SIZE, rng, (1, 1)));
+        Self { grid }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, rng: &RandGenerator) {
         // Updating should be multiple stages:
         // First: apply all in-chunk movements
         // Second: get all cross-chunk movements for each chunk
         // Third: apply all cross-chunk movements
         let mut cross_chunk_movements: Vec<Vec<GridMovement>> = vec![];
         for ((_x, _y), chunk) in self.grid.iter_mut() {
-            cross_chunk_movements.push(chunk.update(&self.rng)); // Update all in-chunk movements and return all crosschunk movements
+            cross_chunk_movements.push(chunk.update(rng)); // Update all in-chunk movements and return all crosschunk movements
         }
 
         // Apply all cross chunk movements
@@ -196,12 +194,10 @@ pub struct Chunk {
 
     texture: Texture2D,
     updated_last_frame: bool,
-
-    _seed: u64,
 }
 impl Chunk {
-    pub fn new(size: (usize, usize), _seed: u64, key: (i32, i32)) -> Self {
-        let chunk = vec![PixelType::Air.to_pixel(); CHUNK_SIZE.0 as usize * CHUNK_SIZE.1 as usize];
+    pub fn new(size: (usize, usize), rng: &RandGenerator, key: (i32, i32)) -> Self {
+        let chunk = vec![Pixel::empty(); CHUNK_SIZE.0 as usize * CHUNK_SIZE.1 as usize];
         let last_updates = HashMap::new();
 
         let image = Image::gen_image_color(
@@ -227,8 +223,6 @@ impl Chunk {
 
             texture,
             updated_last_frame: false,
-
-            _seed,
         }
     }
 
@@ -319,7 +313,7 @@ impl Chunk {
         for y in 0..CHUNK_SIZE.1 {
             for x in 0..CHUNK_SIZE.0 {
                 if let Some(pixel) = self.get(x as i32, y as i32) {
-                    let color = pixel.pixel_type().to_color();
+                    let color = pixel.color();
                     image.set_pixel(x as u32, y as u32, color);
                 }
             }
@@ -391,14 +385,14 @@ impl Chunk {
     pub fn remove(&mut self, x: i32, y: i32) -> Pixel {
         let index = Chunk::index(x, y);
         let old = self.chunk[index];
-        self.chunk[index] = PixelType::Air.to_pixel();
+        self.chunk[index] = Pixel::empty();
         old
     }
     pub fn clear(&mut self) {
         self.chunk.clear();
         for _ in 0..CHUNK_SIZE.0 {
             for _ in 0..CHUNK_SIZE.1 {
-                self.chunk.push(PixelType::Air.to_pixel());
+                self.chunk.push(Pixel::empty());
             }
         }
     }
