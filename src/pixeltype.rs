@@ -4,7 +4,7 @@ use macroquad::{
 };
 
 use crate::{
-    pixel::{update_sand, update_water},
+    pixel::{Pixel, update_sand, update_water},
     pixelgrid::{Chunk, GridMovement},
 };
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -63,6 +63,10 @@ impl PixelType {
                 a: 0.0,
             },
         }
+    }
+
+    pub fn to_pixel(&self) -> Pixel {
+        Pixel::from_pixel_type(*self)
     }
 
     pub fn update(

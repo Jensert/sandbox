@@ -1,4 +1,4 @@
-use crate::{CHUNK_SIZE, pixeltype::PixelType};
+use crate::{CHUNK_SIZE, pixel::Pixel, pixeltype::PixelType};
 use macroquad::{
     prelude::*,
     rand::{ChooseRandom, RandGenerator},
@@ -87,7 +87,7 @@ impl ChunkGrid {
                                 chunk.set(
                                     movement.new_position.0,
                                     movement.new_position.1,
-                                    movement.pixel_type,
+                                    movement.pixel,
                                 );
                             } else {
                             }
@@ -124,12 +124,12 @@ impl ChunkGrid {
         }
     }
 
-    pub fn set_pixel(&mut self, world_position: Vec2, pixel_type: PixelType) {
+    pub fn set_pixel(&mut self, world_position: Vec2, pixel: Pixel) {
         let chunk_position = ChunkPosition::from_world_position(world_position);
         self.grid.get_mut(&chunk_position.chunk_key).unwrap().set(
             chunk_position.chunk_coordinate.0,
             chunk_position.chunk_coordinate.1,
-            pixel_type,
+            pixel,
         );
     }
 
@@ -191,8 +191,8 @@ pub struct Chunk {
     width: i32,
     height: i32,
     key: (i32, i32),
-    chunk: Vec<PixelType>,
-    last_updates: HashMap<(i32, i32), PixelType>,
+    chunk: Vec<Pixel>,
+    last_updates: HashMap<(i32, i32), Pixel>,
 
     texture: Texture2D,
     updated_last_frame: bool,
@@ -201,7 +201,7 @@ pub struct Chunk {
 }
 impl Chunk {
     pub fn new(size: (usize, usize), _seed: u64, key: (i32, i32)) -> Self {
-        let chunk = vec![PixelType::Air; CHUNK_SIZE.0 as usize * CHUNK_SIZE.1 as usize];
+        let chunk = vec![PixelType::Air.to_pixel(); CHUNK_SIZE.0 as usize * CHUNK_SIZE.1 as usize];
         let last_updates = HashMap::new();
 
         let image = Image::gen_image_color(
@@ -293,10 +293,10 @@ impl Chunk {
                 self.set(
                     movement.new_position.0,
                     movement.new_position.1,
-                    movement.pixel_type,
+                    movement.pixel,
                 ); // Then we insert that pixel into a new key
                 self.last_updates
-                    .insert(movement.new_position, movement.pixel_type); // And also insert it into the updated hashmap
+                    .insert(movement.new_position, movement.pixel); // And also insert it into the updated hashmap
             }
 
             self.update_texture(); // Update the texture to apply the changes visually
@@ -323,8 +323,8 @@ impl Chunk {
 
         for y in 0..CHUNK_SIZE.1 {
             for x in 0..CHUNK_SIZE.0 {
-                if let Some(pixel_type) = self.get(x as i32, y as i32) {
-                    let color = pixel_type.to_color();
+                if let Some(pixel) = self.get(x as i32, y as i32) {
+                    let color = pixel.pixel_type().to_color();
                     image.set_pixel(x as u32, y as u32, color);
                 }
             }
@@ -371,11 +371,11 @@ impl Chunk {
             return GridQuery::OutOfBounds;
         }
         // If it is not out of bounds, check if there is a pixel in the position
-        if let Some(pixel_type) = self.get(x, y) {
-            if *pixel_type == PixelType::Air {
+        if let Some(pixel) = self.get(x, y) {
+            if pixel.pixel_type() == PixelType::Air {
                 GridQuery::None
             } else {
-                GridQuery::Hit(*pixel_type)
+                GridQuery::Hit(*pixel)
             }
         } else {
             GridQuery::None
@@ -384,26 +384,26 @@ impl Chunk {
     pub fn index(x: i32, y: i32) -> usize {
         (y * CHUNK_SIZE.0 as i32 + x) as usize
     }
-    pub fn get(&self, x: i32, y: i32) -> Option<&PixelType> {
+    pub fn get(&self, x: i32, y: i32) -> Option<&Pixel> {
         let index = Chunk::index(x, y);
         self.chunk.get(index)
     }
-    pub fn set(&mut self, x: i32, y: i32, pixel: PixelType) {
+    pub fn set(&mut self, x: i32, y: i32, pixel: Pixel) {
         let index = Chunk::index(x, y);
         self.chunk[index] = pixel;
         self.updated_last_frame = true;
     }
-    pub fn remove(&mut self, x: i32, y: i32) -> PixelType {
+    pub fn remove(&mut self, x: i32, y: i32) -> Pixel {
         let index = Chunk::index(x, y);
         let old = self.chunk[index];
-        self.chunk[index] = PixelType::Air;
+        self.chunk[index] = PixelType::Air.to_pixel();
         old
     }
     pub fn clear(&mut self) {
         self.chunk.clear();
         for _ in 0..CHUNK_SIZE.0 {
             for _ in 0..CHUNK_SIZE.1 {
-                self.chunk.push(PixelType::Air);
+                self.chunk.push(PixelType::Air.to_pixel());
             }
         }
     }
@@ -415,10 +415,9 @@ impl Chunk {
     }
 }
 
-#[derive(PartialEq)]
 pub enum GridQuery {
     OutOfBounds,
-    Hit(PixelType),
+    Hit(Pixel),
     None,
 }
 impl GridQuery {
@@ -436,16 +435,16 @@ pub struct GridMovement {
     pub new_position: (i32, i32),
     pub old_chunk: Option<(i32, i32)>,
     pub new_chunk: Option<(i32, i32)>,
-    pub pixel_type: PixelType,
+    pub pixel: Pixel,
 }
 impl GridMovement {
-    pub fn new(old_position: (i32, i32), new_position: (i32, i32), pixel_type: PixelType) -> Self {
+    pub fn new(old_position: (i32, i32), new_position: (i32, i32), pixel: Pixel) -> Self {
         Self {
             old_position,
             new_position,
             old_chunk: None,
             new_chunk: None,
-            pixel_type,
+            pixel,
         }
     }
 

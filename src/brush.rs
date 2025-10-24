@@ -56,7 +56,7 @@ impl Brush {
             let dy = world_position.y + y as f32;
             for x in 0..self.brush_size as i32 {
                 let dx = world_position.x + x as f32;
-                chunk_grid.set_pixel(vec2(dx, dy), self.pixel_type())
+                chunk_grid.set_pixel(vec2(dx, dy), self.pixel_type().to_pixel())
             }
         }
     }
@@ -69,7 +69,7 @@ impl Brush {
                 let dx = x as f32 - center.x;
                 let dist = (dx * dx + dy * dy).sqrt();
                 if dist <= radius - 1.0 as f32 {
-                    chunk_grid.set_pixel(center, self.pixel_type());
+                    chunk_grid.set_pixel(center, self.pixel_type().to_pixel());
                 }
             }
         }
