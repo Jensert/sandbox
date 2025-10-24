@@ -6,9 +6,10 @@ use macroquad::{
 mod app;
 mod brush;
 mod pixel;
-mod pixel_grid;
+mod pixelgrid;
+mod pixeltype;
 use app::App;
-use pixel_grid::ChunkPosition;
+use pixelgrid::ChunkPosition;
 
 pub fn window_settings() -> Conf {
     Conf {
@@ -53,7 +54,7 @@ async fn main() {
                 }
                 ui.label(
                     None,
-                    format!("Selected pixel: {}", app.brush().pixel_type().get()).as_str(),
+                    format!("Selected pixel: {}", app.brush().pixel_type().to_str()).as_str(),
                 );
 
                 ui.label(

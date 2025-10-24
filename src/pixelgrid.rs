@@ -1,7 +1,4 @@
-use crate::{
-    CHUNK_SIZE,
-    pixel::{PixelType, draw_pixel},
-};
+use crate::{CHUNK_SIZE, pixeltype::PixelType};
 use macroquad::{
     prelude::*,
     rand::{ChooseRandom, RandGenerator},
@@ -15,7 +12,7 @@ pub struct ChunkPosition {
 }
 
 impl ChunkPosition {
-    pub fn new(chunk_key: (i32, i32), chunk_coordinate: (i32, i32)) -> Self {
+    pub fn _new(chunk_key: (i32, i32), chunk_coordinate: (i32, i32)) -> Self {
         Self {
             chunk_key,
             chunk_coordinate,
@@ -59,7 +56,7 @@ impl ChunkGrid {
         // Second: get all cross-chunk movements for each chunk
         // Third: apply all cross-chunk movements
         let mut cross_chunk_movements: Vec<Vec<GridMovement>> = vec![];
-        for ((x, y), chunk) in self.grid.iter_mut() {
+        for ((_x, _y), chunk) in self.grid.iter_mut() {
             cross_chunk_movements.push(chunk.update(&self.rng)); // Update all in-chunk movements and return all crosschunk movements
         }
 
@@ -101,7 +98,7 @@ impl ChunkGrid {
         }
     }
 
-    pub fn update_all_textures(&mut self) {
+    pub fn _update_all_textures(&mut self) {
         for ((_, _), chunk) in self.grid.iter_mut() {
             chunk.update_texture();
         }
@@ -125,10 +122,6 @@ impl ChunkGrid {
         for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
             chunk.draw(*chunk_key_x, *chunk_key_y);
         }
-    }
-
-    pub fn grid(&mut self) -> &mut HashMap<(i32, i32), Chunk> {
-        &mut self.grid
     }
 
     pub fn set_pixel(&mut self, world_position: Vec2, pixel_type: PixelType) {
@@ -170,7 +163,7 @@ impl ChunkGrid {
     /// Does the same check as is_free(). It checks the chunk coordinate
     /// if it is free. But this returns the chunk if it is free.
     /// Can be used to directly insert into the chunk that is checked.
-    pub fn get_chunk_if_free(&self, grid_movement: &GridMovement) -> Option<&Chunk> {
+    pub fn _get_chunk_if_free(&self, grid_movement: &GridMovement) -> Option<&Chunk> {
         match grid_movement.new_chunk {
             None => {
                 println!("chunk key not set! skipping movement");
@@ -237,13 +230,6 @@ impl Chunk {
 
             _seed,
         }
-    }
-    pub fn chunk(&self) -> &Vec<PixelType> {
-        return &self.chunk;
-    }
-
-    pub fn chunk_mut(&mut self) -> &mut Vec<PixelType> {
-        return &mut self.chunk;
     }
 
     /// The update function returns a vector of cross gridmovements. The return type is only used

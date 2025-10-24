@@ -1,10 +1,6 @@
 use macroquad::math::{Vec2, vec2};
 
-use crate::{
-    CHUNK_SIZE,
-    pixel::PixelType,
-    pixel_grid::{Chunk, ChunkGrid},
-};
+use crate::{CHUNK_SIZE, pixelgrid::ChunkGrid, pixeltype::PixelType};
 
 #[derive(Clone, Copy)]
 pub enum BrushType {
@@ -56,11 +52,10 @@ impl Brush {
     }
 
     pub fn draw_pixel(&self, world_position: Vec2, chunk_grid: &mut ChunkGrid) {
-        let mut pos = world_position;
         for y in 0..self.brush_size as i32 {
-            let dy = pos.y + y as f32;
+            let dy = world_position.y + y as f32;
             for x in 0..self.brush_size as i32 {
-                let dx = pos.x + x as f32;
+                let dx = world_position.x + x as f32;
                 chunk_grid.set_pixel(vec2(dx, dy), self.pixel_type())
             }
         }

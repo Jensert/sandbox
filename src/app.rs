@@ -1,12 +1,7 @@
 use macroquad::{prelude::*, rand::RandGenerator};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{
-    CHUNK_SIZE, RENDER_SIZE,
-    brush::Brush,
-    pixel::PixelType,
-    pixel_grid::{Chunk, ChunkGrid},
-};
+use crate::{RENDER_SIZE, brush::Brush, pixelgrid::ChunkGrid};
 pub struct App {
     render_ratio: (f32, f32),
 
@@ -83,10 +78,6 @@ impl App {
     }
     pub fn brush_mut(&mut self) -> &mut Brush {
         &mut self.brush
-    }
-
-    pub fn reset(&mut self) {
-        self.chunks_mut().clear();
     }
 
     pub fn mouse_to_world(&self) -> Vec2 {
