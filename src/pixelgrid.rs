@@ -122,6 +122,12 @@ impl ChunkGrid {
         }
     }
 
+    pub fn draw_borders(&self) {
+        for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
+            chunk.draw_border(*chunk_key_x, *chunk_key_y);
+        }
+    }
+
     pub fn set_pixel(&mut self, world_position: Vec2, pixel: Pixel) {
         let chunk_position = ChunkPosition::from_world_position(world_position);
         self.grid.get_mut(&chunk_position.chunk_key).unwrap().set(
@@ -349,6 +355,17 @@ impl Chunk {
             }
         }
         */
+    }
+
+    pub fn draw_border(&self, chunk_key_x: i32, chunk_key_y: i32) {
+        draw_line(
+            (chunk_key_x * CHUNK_SIZE.0 as i32) as f32,
+            (chunk_key_y * CHUNK_SIZE.1 as i32) as f32,
+            ((chunk_key_x * CHUNK_SIZE.0 as i32) + CHUNK_SIZE.0 as i32) as f32,
+            ((chunk_key_y * CHUNK_SIZE.1 as i32) + CHUNK_SIZE.1 as i32) as f32,
+            1.0,
+            WHITE,
+        );
     }
 
     pub fn query(&self, x: i32, y: i32) -> GridQuery {
