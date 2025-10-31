@@ -98,9 +98,11 @@ async fn main() {
 
         app.stop_drawing();
 
+        app.chunks_mut().update(&rng);
+
         // Everything that is drawn after app.stop_drawing() is called is drawn at screen resolution
 
-        app.chunks().draw_borders();
+        app.chunks().draw_borders(app.render_ratio());
 
         next_frame().await;
     }

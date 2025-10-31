@@ -67,6 +67,10 @@ impl App {
         &mut self.brush
     }
 
+    pub fn render_ratio(&self) -> (f32, f32) {
+        self.render_ratio
+    }
+
     pub fn mouse_to_world(&self) -> Vec2 {
         let m_screen_pos = mouse_position(); // Get mouse position
         let m_world_pos = self

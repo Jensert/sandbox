@@ -5,6 +5,7 @@
 [x] Update texture only if the chunk has changed
 [x] Change chunk value from enum PixelType to struct Pixel
   -- Required for more complex behaviour like heat
+[] Add gameplay
 [] Add way to skip pixels that do not require updating
 [] Add world gen
 [] Implement parallelization

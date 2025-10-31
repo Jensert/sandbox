@@ -122,9 +122,9 @@ impl ChunkGrid {
         }
     }
 
-    pub fn draw_borders(&self) {
+    pub fn draw_borders(&self, render_ratio: (f32, f32)) {
         for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
-            chunk.draw_border(*chunk_key_x, *chunk_key_y);
+            chunk.draw_border(*chunk_key_x, *chunk_key_y, render_ratio);
         }
     }
 
@@ -357,12 +357,14 @@ impl Chunk {
         */
     }
 
-    pub fn draw_border(&self, chunk_key_x: i32, chunk_key_y: i32) {
+    pub fn draw_border(&self, chunk_key_x: i32, chunk_key_y: i32, render_ratio: (f32, f32)) {
+        let x_adjust = CHUNK_SIZE.0 as f32 * render_ratio.0;
+        let y_adjust = CHUNK_SIZE.1 as f32 * render_ratio.1;
         draw_line(
-            (chunk_key_x * CHUNK_SIZE.0 as i32) as f32,
-            (chunk_key_y * CHUNK_SIZE.1 as i32) as f32,
-            ((chunk_key_x * CHUNK_SIZE.0 as i32) + CHUNK_SIZE.0 as i32) as f32,
-            ((chunk_key_y * CHUNK_SIZE.1 as i32) + CHUNK_SIZE.1 as i32) as f32,
+            (chunk_key_x as f32 * x_adjust),            // X1
+            (chunk_key_y as f32 * y_adjust),            // y1
+            (chunk_key_x as f32 * x_adjust) * x_adjust, // X2
+            (chunk_key_y as f32 * y_adjust) * y_adjust, // Y2
             1.0,
             WHITE,
         );
