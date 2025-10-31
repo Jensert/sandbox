@@ -17,6 +17,7 @@ impl App {
     pub fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
         let chunk_grid = ChunkGrid::new(rng);
         // Create the texture to which we will draw
+        // TODO Replace with Canvas2D
         let render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
         // Set filter mode to nearest to prevent blurry pixels
         render_target.texture.set_filter(FilterMode::Nearest);
