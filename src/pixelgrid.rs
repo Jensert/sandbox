@@ -358,16 +358,21 @@ impl Chunk {
     }
 
     pub fn draw_border(&self, chunk_key_x: i32, chunk_key_y: i32, render_ratio: (f32, f32)) {
+        println!("{:?}", render_ratio);
         let x_adjust = CHUNK_SIZE.0 as f32 * render_ratio.0;
         let y_adjust = CHUNK_SIZE.1 as f32 * render_ratio.1;
-        draw_line(
-            (chunk_key_x as f32 * x_adjust),            // X1
-            (chunk_key_y as f32 * y_adjust),            // y1
-            (chunk_key_x as f32 * x_adjust) * x_adjust, // X2
-            (chunk_key_y as f32 * y_adjust) * y_adjust, // Y2
-            1.0,
-            WHITE,
-        );
+
+        let x = chunk_key_x as f32 * x_adjust;
+        let y = chunk_key_y as f32 * y_adjust;
+
+        // Top border
+        draw_line(x, y, x + x_adjust, y, 1.0, WHITE);
+        // Bottom border
+        draw_line(x, y + y_adjust, x + x_adjust, y + y_adjust, 1.0, WHITE);
+        // Left border
+        draw_line(x, y, x, y + y_adjust, 1.0, WHITE);
+        // Right border
+        draw_line(x + x_adjust, y, x + x_adjust, y + y_adjust, 1.0, WHITE);
     }
 
     pub fn query(&self, x: i32, y: i32) -> GridQuery {
