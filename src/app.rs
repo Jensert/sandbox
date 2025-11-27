@@ -35,9 +35,9 @@ impl App {
         // The render_camera is then scaled to our screen dimensions during drawing
         let default_camera = Camera2D::from_display_rect(Rect {
             x: 0.0,
-            y: 0.0,
+            y: screen_height(),
             w: screen_width(), // this camera's viewport has the screen dimensions
-            h: screen_height(),
+            h: -screen_height(),
         });
         Self {
             render_ratio,
@@ -164,8 +164,8 @@ impl App {
                 dest_size: Some(vec2(
                     self.render_target.texture.width() * self.render_ratio.0, // We multiply the texture's dimensions by 4
                     self.render_target.texture.height() * self.render_ratio.1, // Because the texture is a quarter of the size
-                )), // We should change this to dynamically multiply it by the ratio: screen / render target size
-                // The INITIAL sizes, not the scaled sizes after the camera projections
+                )),
+                flip_y: true,
                 ..Default::default()
             },
         );
