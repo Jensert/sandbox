@@ -24,7 +24,7 @@ pub fn window_settings() -> Conf {
 }
 
 const CHUNK_SIZE: (usize, usize) = (160, 90);
-const RENDER_SIZE: (u32, u32) = (240, 125);
+const RENDER_SIZE: (u32, u32) = (320, 180);
 
 #[main(window_settings)]
 async fn main() {
@@ -47,12 +47,22 @@ async fn main() {
     println!("Started app with seed: {seed}");
     // Create pixelgrid with the seed
     while app.running() {
+        println!("{}", 1.0 / get_frame_time());
+
+        // Get user input
         app.handle_input(&rng);
+
+        // Update all states and logic
+        app.update(&rng);
+
+        // Start draw call. Everything drawn here is drawn to the render target
         app.start_drawing();
+        // All drawing logic goes after this
         clear_background(SKYBLUE);
-
+        // Draw the pixel chunks
         app.chunks().draw();
-
+        // Draw the UI.
+        // [TODO] move all UI logic to a seperate function / struct
         widgets::Window::new(hash!(), vec2(0.0, 0.0), vec2(300.0, 300.0))
             .label("Info")
             .movable(true)
@@ -95,13 +105,11 @@ async fn main() {
                     .as_str(),
                 );
             });
-
+        // Stop the current draw call
         app.stop_drawing();
 
-        app.chunks_mut().update(&rng);
-
         // Everything that is drawn after app.stop_drawing() is called is drawn at screen resolution
-
+        // and uses the default camera. This is not drawn to the render target
         app.chunks().draw_borders(app.render_ratio());
 
         next_frame().await;

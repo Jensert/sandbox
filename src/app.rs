@@ -171,6 +171,10 @@ impl App {
         );
     }
 
+    pub fn update(&mut self, rng: &RandGenerator) {
+        self.chunks_mut().update(rng)
+    }
+
     pub fn chunks(&self) -> &ChunkGrid {
         return &self.chunk_grid;
     }

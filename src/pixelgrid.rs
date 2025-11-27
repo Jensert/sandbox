@@ -358,7 +358,6 @@ impl Chunk {
     }
 
     pub fn draw_border(&self, chunk_key_x: i32, chunk_key_y: i32, render_ratio: (f32, f32)) {
-        println!("{:?}", render_ratio);
         let x_adjust = CHUNK_SIZE.0 as f32 * render_ratio.0;
         let y_adjust = CHUNK_SIZE.1 as f32 * render_ratio.1;
 
