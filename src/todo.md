@@ -5,7 +5,8 @@
 [x] Update texture only if the chunk has changed
 [x] Change chunk value from enum PixelType to struct Pixel
   -- Required for more complex behaviour like heat
-[] Add gameplay
-[] Add way to skip pixels that do not require updating
 [] Add world gen
+[] Add gameplay
+[] Move UI logic and drawing to a seperate struct. This struct should be owned by App.
+[] Add way to skip pixels that do not require updating
 [] Implement parallelization
