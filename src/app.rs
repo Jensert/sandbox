@@ -1,6 +1,6 @@
 use macroquad::{prelude::*, rand::RandGenerator};
 
-use crate::{RENDER_SIZE, brush::Brush, pixelgrid::ChunkGrid};
+use crate::{RENDER_SIZE, brush::Brush, pixelgrid::ChunkGrid, ui::UserInterface};
 pub struct App {
     render_ratio: (f32, f32),
 
@@ -9,9 +9,13 @@ pub struct App {
     render_camera: Camera2D,
     default_camera: Camera2D,
 
+    mouse_world_position: Vec2,
+
     should_quit: bool,
     total_scroll: f32,
+
     brush: Brush,
+    user_interface: UserInterface,
 }
 impl App {
     pub fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
@@ -47,10 +51,13 @@ impl App {
             render_camera,
             default_camera,
 
+            mouse_world_position: Vec2 { x: 0.0, y: 0.0 },
+
             should_quit: false,
             total_scroll: 0.0,
 
             brush: Brush::new(),
+            user_interface: UserInterface::new(),
         }
     }
 
@@ -68,11 +75,19 @@ impl App {
         &mut self.brush
     }
 
+    pub fn draw_ui(&mut self) {
+        self.user_interface.draw(
+            &mut self.chunk_grid,
+            &mut self.brush,
+            self.mouse_world_position,
+        );
+    }
+
     pub fn render_ratio(&self) -> (f32, f32) {
         self.render_ratio
     }
 
-    pub fn mouse_to_world(&self) -> Vec2 {
+    fn mouse_to_world(&self) -> Vec2 {
         let m_screen_pos = mouse_position(); // Get mouse position
         let m_world_pos = self
             .render_camera
@@ -80,10 +95,13 @@ impl App {
             .round(); // Round world position to integer, to prevent pixels at half positions
         return m_world_pos;
     }
+
     fn handle_mouse_input(&mut self, rng: &RandGenerator) {
+        self.mouse_world_position = self.mouse_to_world();
+
         if is_mouse_button_down(MouseButton::Left) {
-            let world_position = self.mouse_to_world();
-            self.brush().draw(world_position, self.chunks_mut(), rng);
+            self.brush()
+                .draw(self.mouse_world_position, self.chunks_mut(), rng);
         }
 
         // Handle scrolling

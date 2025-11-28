@@ -1,18 +1,13 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use macroquad::{
-    main,
-    prelude::*,
-    rand::RandGenerator,
-    ui::{hash, root_ui, widgets},
-};
+use macroquad::{main, prelude::*, rand::RandGenerator};
 mod app;
 mod brush;
 mod pixel;
 mod pixelgrid;
 mod pixeltype;
+mod ui;
 use app::App;
-use pixelgrid::ChunkPosition;
 
 pub fn window_settings() -> Conf {
     Conf {
@@ -62,49 +57,7 @@ async fn main() {
         // Draw the pixel chunks
         app.chunks().draw();
         // Draw the UI.
-        // [TODO] move all UI logic to a seperate function / struct
-        widgets::Window::new(hash!(), vec2(0.0, 0.0), vec2(300.0, 300.0))
-            .label("Info")
-            .movable(true)
-            .titlebar(true)
-            .ui(&mut *root_ui(), |ui| {
-                ui.label(None, format!("FPS: {}", get_fps()).as_str());
-                ui.label(
-                    None,
-                    format!("# Pixels: {}", app.chunks().get_total_pixels()).as_str(),
-                );
-                ui.separator();
-                if ui.button(None, "Reset pixelgrid") {
-                    app.chunks_mut().clear();
-                }
-                ui.label(
-                    None,
-                    format!("Selected pixel: {}", app.brush().pixel_type().to_str()).as_str(),
-                );
-
-                ui.label(
-                    None,
-                    format!("Selected brush type: {}", app.brush().brush_type().as_str()).as_str(),
-                );
-                ui.label(None, format!("Brush size: {}", app.brush().size()).as_str());
-                ui.label(
-                    None,
-                    format!("Mouse screen position: {:?}", mouse_position()).as_str(),
-                );
-                ui.label(
-                    None,
-                    format!("Mouse world position: {:?}", app.mouse_to_world()).as_str(),
-                );
-                let position = ChunkPosition::from_world_position(app.mouse_to_world());
-                ui.label(
-                    None,
-                    format!(
-                        "Mouse chunk position: {:?}, {:?}",
-                        position.chunk_key, position.chunk_coordinate
-                    )
-                    .as_str(),
-                );
-            });
+        app.draw_ui();
         // Stop the current draw call
         app.stop_drawing();
 

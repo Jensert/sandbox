@@ -34,6 +34,7 @@ impl ChunkPosition {
         }
     }
 }
+// Do not implement copy or clone
 pub struct ChunkGrid {
     grid: HashMap<(i32, i32), Chunk>,
 }
@@ -191,6 +192,7 @@ impl ChunkGrid {
     }
 }
 
+// Do not implement copy or clone
 pub struct Chunk {
     width: i32,
     height: i32,
