@@ -13,8 +13,26 @@ impl UserInterface {
         }
     }
 
+    pub fn toggle_debug(&mut self) {
+        self.debug_enabled = !self.debug_enabled;
+    }
+
+    /// Wrapper function for all UserInterface drawing logic
+    /// This calls other internal drawing functions inside UserInterface like draw_debug
     pub fn draw(&self, chunk_grid: &mut ChunkGrid, brush: &mut Brush, mouse_world_position: Vec2) {
-        // [TODO] move all UI logic to a seperate function / struct
+        if self.debug_enabled {
+            self.draw_debug(chunk_grid, brush, mouse_world_position)
+        }
+    }
+
+    /// This function is called internally by UserInterface.draw()
+    /// This should probably not be called directly
+    fn draw_debug(
+        &self,
+        chunk_grid: &mut ChunkGrid,
+        brush: &mut Brush,
+        mouse_world_position: Vec2,
+    ) {
         widgets::Window::new(hash!(), vec2(0.0, 0.0), vec2(300.0, 300.0))
             .label("Debug window")
             .movable(true)

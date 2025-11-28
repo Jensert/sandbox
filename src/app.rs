@@ -159,6 +159,9 @@ impl App {
         if is_key_pressed(KeyCode::C) {
             self.chunk_grid.clear();
         }
+        if is_key_pressed(KeyCode::GraveAccent) {
+            self.user_interface.toggle_debug();
+        }
     }
 
     pub fn handle_input(&mut self, rng: &RandGenerator) {
