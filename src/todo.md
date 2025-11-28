@@ -7,6 +7,6 @@
   -- Required for more complex behaviour like heat
 [] Add world gen
 [] Add gameplay
-[] Move UI logic and drawing to a seperate struct. This struct should be owned by App.
+[x] Move UI logic and drawing to a seperate struct. This struct should be owned by App.
 [] Add way to skip pixels that do not require updating
 [] Implement parallelization
