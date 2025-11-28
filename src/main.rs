@@ -42,8 +42,6 @@ async fn main() {
     println!("Started app with seed: {seed}");
     // Create pixelgrid with the seed
     while app.running() {
-        println!("{}", 1.0 / get_frame_time());
-
         // Get user input
         app.handle_input(&rng);
 
