@@ -55,7 +55,7 @@ async fn main() {
         // Draw the pixel chunks
         app.chunks().draw();
         // Draw the UI.
-        app.draw_ui();
+        app.draw_ui(&rng);
         // Stop the current draw call
         app.stop_drawing();
 

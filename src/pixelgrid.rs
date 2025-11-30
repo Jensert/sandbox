@@ -1,9 +1,9 @@
-use crate::{CHUNK_SIZE, pixel::Pixel, pixeltype::PixelType};
+use crate::{CHUNK_SIZE, RENDER_SIZE, pixel::Pixel, pixeltype::PixelType};
 use macroquad::{
     prelude::*,
     rand::{ChooseRandom, RandGenerator},
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug)]
 pub struct ChunkPosition {
@@ -91,6 +91,85 @@ impl ChunkGrid {
                             } else {
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn generate_map(&mut self, rng: &RandGenerator) {
+        // Clear current map first
+        self.clear();
+
+        let width = RENDER_SIZE.0 as i32;
+        let height = RENDER_SIZE.1 as i32;
+
+        // Generate bottom stone layer
+        let min_y = (height as f32 * 0.75) as i32;
+        for y in min_y..height {
+            for x in 0..width {
+                let pos = Vec2::new(x as f32, y as f32);
+                let chunk_pos = ChunkPosition::from_world_position(pos);
+
+                if let Some(chunk) = self.grid.get_mut(&chunk_pos.chunk_key) {
+                    chunk.set(
+                        chunk_pos.chunk_coordinate.0,
+                        chunk_pos.chunk_coordinate.1,
+                        Pixel::from_pixel_type(PixelType::Stone, &rng),
+                    );
+                }
+            }
+        }
+
+        // Generate middle dirt layer
+        let max_y = (height as f32 * 0.75) as i32;
+        let min_y = (height as f32 * 0.50) as i32;
+        for y in min_y..max_y {
+            for x in 0..width {
+                let pos = Vec2::new(x as f32, y as f32);
+                let chunk_pos = ChunkPosition::from_world_position(pos);
+
+                if let Some(chunk) = self.grid.get_mut(&chunk_pos.chunk_key) {
+                    chunk.set(
+                        chunk_pos.chunk_coordinate.0,
+                        chunk_pos.chunk_coordinate.1,
+                        Pixel::from_pixel_type(PixelType::Dirt, &rng),
+                    );
+                }
+            }
+        }
+
+        // Generate grass layer
+        let max_y = (height as f32 * 0.75) as i32;
+        let min_y = (height as f32 * 0.50) as i32;
+
+        /// Smooth downward curve for 115 < y ≤ 135
+        /// 135 → 0.9, 130 → 0.5, 115 → 0.0
+        /// Everything ≤ 115 is 0
+        fn grass_probability(y: i32) -> f32 {
+            if y > 115 {
+                return 0.0;
+            }
+
+            let t = (115 - y) as f32;
+            let p = 0.0122 * t * t - 0.0019 * t;
+
+            p.clamp(0.0, 1.0)
+        }
+        for y in min_y..max_y {
+            let chance = grass_probability(y);
+            println!("{chance}");
+            for x in 0..width {
+                if rng.gen_range(0.0, 1.0) < chance {
+                    // 8% chance
+                    let pos = Vec2::new(x as f32, y as f32);
+                    let chunk_pos = ChunkPosition::from_world_position(pos);
+                    if let Some(chunk) = self.grid.get_mut(&chunk_pos.chunk_key) {
+                        chunk.set(
+                            chunk_pos.chunk_coordinate.0,
+                            chunk_pos.chunk_coordinate.1,
+                            Pixel::from_pixel_type(PixelType::Grass, &rng),
+                        )
                     }
                 }
             }

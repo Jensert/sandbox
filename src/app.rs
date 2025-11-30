@@ -75,11 +75,12 @@ impl App {
         &mut self.brush
     }
 
-    pub fn draw_ui(&mut self) {
+    pub fn draw_ui(&mut self, rng: &RandGenerator) {
         self.user_interface.draw(
             &mut self.chunk_grid,
             &mut self.brush,
             self.mouse_world_position,
+            &rng,
         );
     }
 
