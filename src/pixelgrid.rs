@@ -70,25 +70,36 @@ impl ChunkGrid {
                         // We have to remove the pixel from the old position here
                         if self.is_free(&movement) {
                             // Get the old chunk where the pixel has to be removed
-                            let old_chunk = self
-                                .grid
-                                .get_mut(&movement.old_chunk.unwrap())
-                                .expect(format!("Expected a chunk at {:?}", chunk_key).as_str());
-                            // Get the pixel from the old chunk
-                            let pixel =
-                                old_chunk.remove(movement.old_position.0, movement.old_position.1);
-                            // Get the new chunk where the pixel should move
-                            let chunk = self
-                                .grid
-                                .get_mut(&chunk_key)
-                                .expect(format!("Expected a chunk at {:?}", chunk_key).as_str());
-                            if chunk
-                                .query(movement.new_position.0, movement.new_position.1)
-                                .is_free()
-                            {
-                                // Set the pixel in the new chunk
-                                chunk.set(movement.new_position.0, movement.new_position.1, pixel);
-                            } else {
+                            let old_chunk = self.grid.get_mut(&movement.old_chunk.unwrap());
+                            // Check if the chunk exists
+                            if let Some(chunk) = old_chunk {
+                                // Get the pixel from the old chunk
+                                let pixel =
+                                    chunk.remove(movement.old_position.0, movement.old_position.1);
+                                // Get the new chunk where the pixel should move
+                                let chunk = self.grid.get_mut(&chunk_key);
+                                match chunk {
+                                    // Check if the new chunk exists
+                                    Some(chunk) => {
+                                        // Check if new chunk position is free
+                                        if chunk
+                                            .query(movement.new_position.0, movement.new_position.1)
+                                            .is_free()
+                                        {
+                                            // Set the pixel in the new chunk
+                                            chunk.set(
+                                                movement.new_position.0,
+                                                movement.new_position.1,
+                                                pixel,
+                                            );
+                                        }
+                                    }
+                                    None => unreachable!(), // Do nothing because chunk does not exist
+                                                            // If this None branch is reached, then the pixel will simply be removed
+                                                            // from the simulation. Because the pixel is removed from the chunk from the old
+                                                            // check, but is never readded in the new position. Currently this is fine, but
+                                                            // wil probnably spawn some unwanted bugs later on
+                                }
                             }
                         }
                     }
@@ -228,16 +239,17 @@ impl ChunkGrid {
                 false
             }
             Some(chunk_key) => {
-                let chunk = self
-                    .grid
-                    .get(&chunk_key)
-                    .expect(format!("Expected a chunk at {:?}", chunk_key).as_str());
-                if chunk
-                    .query(grid_movement.new_position.0, grid_movement.new_position.1)
-                    .is_free()
-                {
-                    true
+                if let Some(chunk) = self.grid.get(&chunk_key) {
+                    if chunk
+                        .query(grid_movement.new_position.0, grid_movement.new_position.1)
+                        .is_free()
+                    {
+                        true
+                    } else {
+                        false
+                    }
                 } else {
+                    // If chunk does not exist, do not move the pixel
                     false
                 }
             }
