@@ -3,6 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use macroquad::{main, prelude::*, rand::RandGenerator};
 mod app;
 mod brush;
+mod mapgenerator;
 mod pixel;
 mod pixelgrid;
 mod pixeltype;
