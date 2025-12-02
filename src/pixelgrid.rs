@@ -115,9 +115,10 @@ impl ChunkGrid {
         let width = RENDER_SIZE.0 as i32;
         let height = RENDER_SIZE.1 as i32;
 
-        // Generate bottom stone layer
-        let min_y = (height as f32 * 0.75) as i32;
-        for y in min_y..height {
+        // Generate first stone layer
+        let min_y = (height as f32 * 0.40) as i32;
+        let max_y = (height as f32 * 0.60) as i32;
+        for y in min_y..max_y {
             for x in 0..width {
                 let pos = Vec2::new(x as f32, y as f32);
                 let chunk_pos = ChunkPosition::from_world_position(pos);
@@ -133,8 +134,18 @@ impl ChunkGrid {
         }
 
         // Generate middle dirt layer
-        let max_y = (height as f32 * 0.75) as i32;
-        let min_y = (height as f32 * 0.50) as i32;
+        let max_y = (height as f32 * 0.40) as i32;
+        let min_y = (height as f32 * 0.25) as i32;
+        let dirt_probability = |y: i32| -> f32 {
+            if y > min_y {
+                return 0.0;
+            }
+
+            let t = (90 - y) as f32;
+            let p = 0.0122 * t * t - 0.0019 * t;
+
+            p.clamp(0.0, 1.0)
+        };
         for y in min_y..max_y {
             for x in 0..width {
                 let pos = Vec2::new(x as f32, y as f32);
@@ -151,22 +162,23 @@ impl ChunkGrid {
         }
 
         // Generate grass layer
-        let max_y = (height as f32 * 0.75) as i32;
-        let min_y = (height as f32 * 0.50) as i32;
+        let max_y = 90;
+        let min_y = 45;
 
-        /// Smooth downward curve for 115 < y ≤ 135
-        /// 135 → 0.9, 130 → 0.5, 115 → 0.0
-        /// Everything ≤ 115 is 0
-        fn grass_probability(y: i32) -> f32 {
-            if y > 115 {
+        // Smooth downward curve for 115 < y ≤ 135
+        // 135 → 0.9, 130 → 0.5, 115 → 0.0
+        // Everything ≤ 115 is 0
+        let grass_probability = |y: i32| -> f32 {
+            let y_fade = ((min_y + max_y) / 2);
+            if y > y_fade {
                 return 0.0;
             }
 
-            let t = (115 - y) as f32;
+            let t = (y_fade - y) as f32;
             let p = 0.0122 * t * t - 0.0019 * t;
 
             p.clamp(0.0, 1.0)
-        }
+        };
         for y in min_y..max_y {
             let chance = grass_probability(y);
             println!("{chance}");
