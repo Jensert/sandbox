@@ -6,6 +6,10 @@
 [x] Change chunk value from enum PixelType to struct Pixel
   -- Required for more complex behaviour like heat
 [] Add world gen
+[] add generate_world() function to MapGenerator
+    Loop over the layer_rules, and call generate() function on all of them
+[] finish push_layer() function in MapGenerator struct
+[] finish all default layer implementations in MapLayerRule.from_default_layer() function
 [] Add gameplay
 [x] Move UI logic and drawing to a seperate struct. This struct should be owned by App.
 [] Add way to skip pixels that do not require updating
