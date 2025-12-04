@@ -201,6 +201,10 @@ impl ChunkGrid {
         }
     }
 
+    pub fn grid_mut(&mut self) -> &mut HashMap<(i32, i32), Chunk> {
+        &mut self.grid
+    }
+
     pub fn _update_all_textures(&mut self) {
         for ((_, _), chunk) in self.grid.iter_mut() {
             chunk.update_texture();

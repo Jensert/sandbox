@@ -1,5 +1,9 @@
+use macroquad::{math::Vec2, rand::RandGenerator};
+
 use crate::{
-    pixelgrid::{self, Chunk, ChunkGrid},
+    RENDER_SIZE,
+    pixel::Pixel,
+    pixelgrid::{self, Chunk, ChunkGrid, ChunkPosition},
     pixeltype::PixelType,
 };
 
@@ -9,6 +13,21 @@ pub struct MapGenerator {
 impl MapGenerator {
     pub fn new(layer_rules: Vec<MapLayerRule>) -> Self {
         Self { layer_rules }
+    }
+
+    /// Push a new layer into the map generator struct
+    /// There is some safety built into this to make sure
+    /// that the layers are pushed in correct order
+    /// They must be pushed from lowest layer to top layer
+    /// LavaLayer > DeepLayer > StoneLayer > DirtLayer > GrassLayer
+    pub fn push_layer(&mut self, layer_rule: MapLayerRule) {
+        match layer_rule.layer_type {
+            LayerType::LavaLayer => (),
+            LayerType::DeepLayer => (),
+            LayerType::StoneLayer => (),
+            LayerType::DirtLayer => (),
+            LayerType::GrassLayer => (),
+        }
     }
 }
 
@@ -58,6 +77,28 @@ impl MapLayerRule {
             LayerType::StoneLayer => unimplemented!(),
             LayerType::DeepLayer => unimplemented!(),
             LayerType::LavaLayer => unimplemented!(),
+        }
+    }
+
+    pub fn generate_layer(&self, chunk_grid: &mut ChunkGrid, rng: &RandGenerator) {
+        for y in self.y_start..self.y_end {
+            // calculate probability here
+            let chance = self.probability.get(y, self.y_start, self.y_end);
+            for x in 0..RENDER_SIZE.0 {
+                // If probability is reached then generate tile
+                if rng.gen_range(0.0, 1.0) < chance {
+                    let pos = Vec2::new(x as f32, y as f32);
+                    let chunk_pos = ChunkPosition::from_world_position(pos);
+
+                    if let Some(chunk) = chunk_grid.grid_mut().get_mut(&chunk_pos.chunk_key) {
+                        chunk.set(
+                            chunk_pos.chunk_coordinate.0,
+                            chunk_pos.chunk_coordinate.1,
+                            Pixel::from_pixel_type(self.pixel_type, &rng),
+                        );
+                    }
+                }
+            }
         }
     }
 }
