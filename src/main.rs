@@ -43,6 +43,7 @@ async fn main() {
     println!("Started app with seed: {seed}");
     // Create pixelgrid with the seed
     while app.running() {
+        let shader_strength = app.user_interface().data().shader_strength;
         // Get user input
         app.handle_input(&rng);
 
@@ -54,7 +55,7 @@ async fn main() {
         // All drawing logic goes after this
         clear_background(SKYBLUE);
         // Draw the pixel chunks
-        app.chunks().draw();
+        app.chunks().draw(shader_strength);
         // Draw the UI.
         app.draw_ui(&rng);
         // Stop the current draw call

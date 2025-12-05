@@ -99,6 +99,10 @@ impl App {
         &mut self.brush
     }
 
+    pub fn user_interface(&self) -> &UserInterface {
+        &self.user_interface
+    }
+
     pub fn draw_ui(&mut self, rng: &RandGenerator) {
         self.user_interface.draw(
             &mut self.chunk_grid,

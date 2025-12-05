@@ -114,7 +114,7 @@ impl ChunkGrid {
 
     pub fn _update_all_textures(&mut self) {
         for ((_, _), chunk) in self.grid.iter_mut() {
-            chunk.update_texture();
+            chunk.update_textures();
         }
     }
 
@@ -132,9 +132,9 @@ impl ChunkGrid {
         res
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, shader_strength: f32) {
         for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
-            chunk.draw(*chunk_key_x, *chunk_key_y);
+            chunk.draw(*chunk_key_x, *chunk_key_y, shader_strength);
         }
     }
 
@@ -216,7 +216,9 @@ pub struct Chunk {
     chunk: Vec<Pixel>,
     last_updates: HashMap<(i32, i32), Pixel>,
 
-    texture: Texture2D,
+    texture_main: Texture2D,
+    shader_texture: Texture2D,
+
     updated_last_frame: bool,
 }
 impl Chunk {
@@ -235,8 +237,10 @@ impl Chunk {
             },
         );
 
-        let texture = Texture2D::from_image(&image);
-        texture.set_filter(FilterMode::Nearest);
+        let main_texture = Texture2D::from_image(&image);
+        let shader_texture = main_texture.clone();
+        main_texture.set_filter(FilterMode::Nearest);
+        shader_texture.set_filter(FilterMode::Linear);
 
         Self {
             width: size.0 as i32,
@@ -245,7 +249,9 @@ impl Chunk {
             chunk,
             last_updates,
 
-            texture,
+            texture_main: main_texture,
+            shader_texture,
+
             updated_last_frame: false,
         }
     }
@@ -276,7 +282,7 @@ impl Chunk {
         // If no changes happened this frame, dont do anything
         if changes.is_empty() {
             if self.updated_last_frame {
-                self.update_texture();
+                self.update_textures();
             }
             self.updated_last_frame = false;
             return vec![]; // return empty vector
@@ -312,7 +318,7 @@ impl Chunk {
                 self.last_updates.insert(movement.new_position, pixel); // And also insert it into the updated hashmap
             }
 
-            self.update_texture(); // Update the texture to apply the changes visually
+            self.update_textures(); // Update the texture to apply the changes visually
             // Return an empty vector for now
 
             cross_chunk_movements
@@ -323,7 +329,12 @@ impl Chunk {
     /// Currently this is called every frame.
     /// Should probably only be called if there is a change in the chunk,
     /// but this is fine for now
-    pub fn update_texture(&mut self) {
+    pub fn update_textures(&mut self) {
+        self.update_main_teture();
+        self.update_shader_teture();
+    }
+
+    pub fn update_main_teture(&mut self) {
         let mut image = Image::gen_image_color(
             CHUNK_SIZE.0 as u16,
             CHUNK_SIZE.1 as u16,
@@ -344,17 +355,41 @@ impl Chunk {
             }
         }
 
-        self.texture.update(&image);
+        self.texture_main.update(&image);
+    }
+
+    pub fn update_shader_teture(&mut self) {
+        let mut image = Image::gen_image_color(
+            CHUNK_SIZE.0 as u16,
+            CHUNK_SIZE.1 as u16,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+        );
+
+        for y in 0..CHUNK_SIZE.1 {
+            for x in 0..CHUNK_SIZE.0 {
+                if let Some(pixel) = self.get(x as i32, y as i32) {
+                    let color = pixel.color();
+                    image.set_pixel(x as u32, y as u32, color);
+                }
+            }
+        }
+
+        self.shader_texture.update(&image);
     }
 
     /// Draw the chunk's texture to the screen in the appropriate coordinates
     /// The chunk key are transformed to screen coordinates
-    pub fn draw(&self, chunk_key_x: i32, chunk_key_y: i32) {
+    pub fn draw(&self, chunk_key_x: i32, chunk_key_y: i32, shader_strength: f32) {
         let chunk_x = chunk_key_x * CHUNK_SIZE.0 as i32;
         let chunk_y = chunk_key_y * CHUNK_SIZE.1 as i32;
 
         draw_texture_ex(
-            &self.texture,
+            &self.texture_main,
             chunk_x as f32,
             chunk_y as f32,
             WHITE,
@@ -363,6 +398,15 @@ impl Chunk {
             },
         );
 
+        draw_texture_ex(
+            &self.shader_texture,
+            chunk_x as f32,
+            chunk_y as f32,
+            Color::new(1.0, 1.0, 1.0, shader_strength),
+            DrawTextureParams {
+                ..Default::default()
+            },
+        );
         /*
         // Here we loop over the pixel grid to draw all the pixels
         for y in 0..CHUNK_SIZE.1 {

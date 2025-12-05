@@ -6,12 +6,18 @@ use macroquad::rand::RandGenerator;
 use macroquad::ui::{hash, root_ui, widgets};
 pub struct UserInterface {
     debug_enabled: bool,
+    shader_strength: f32,
+}
+pub struct UserInterfaceData {
+    pub debug_enabled: bool,
+    pub shader_strength: f32,
 }
 
 impl UserInterface {
     pub fn new() -> Self {
         Self {
             debug_enabled: false,
+            shader_strength: 0.5,
         }
     }
 
@@ -19,10 +25,17 @@ impl UserInterface {
         self.debug_enabled = !self.debug_enabled;
     }
 
+    pub fn data(&self) -> UserInterfaceData {
+        UserInterfaceData {
+            debug_enabled: self.debug_enabled,
+            shader_strength: self.shader_strength,
+        }
+    }
+
     /// Wrapper function for all UserInterface drawing logic
     /// This calls other internal drawing functions inside UserInterface like draw_debug
     pub fn draw(
-        &self,
+        &mut self,
         chunk_grid: &mut ChunkGrid,
         map_generator: &MapGenerator,
         brush: &mut Brush,
@@ -37,7 +50,7 @@ impl UserInterface {
     /// This function is called internally by UserInterface.draw()
     /// This should probably not be called directly
     fn draw_debug(
-        &self,
+        &mut self,
         chunk_grid: &mut ChunkGrid,
         map_generator: &MapGenerator,
         brush: &mut Brush,
@@ -65,6 +78,7 @@ impl UserInterface {
                 if ui.button(None, "Generate map") {
                     map_generator.generate_map(chunk_grid, rng);
                 }
+                ui.slider(1, "Shader strength", 0.0..1.0, &mut self.shader_strength);
                 // Current selected pixel to be drawn
                 ui.label(
                     None,
