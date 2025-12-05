@@ -5,11 +5,13 @@
 [x] Update texture only if the chunk has changed
 [x] Change chunk value from enum PixelType to struct Pixel
   -- Required for more complex behaviour like heat
-[] Add world gen
-[] add generate_world() function to MapGenerator
+[x] Add world gen
+[x] add generate_world() function to MapGenerator
     Loop over the layer_rules, and call generate() function on all of them
-[] finish push_layer() function in MapGenerator struct
-[] finish all default layer implementations in MapLayerRule.from_default_layer() function
+[x] finish push_layer() function in MapGenerator struct
+[x] finish all default layer implementations in MapLayerRule.from_default_layer() function
+[] Add post processing
+[] shader_texture logic and stop_drawing logic in Chunk and App
 [] Add gameplay
 [x] Move UI logic and drawing to a seperate struct. This struct should be owned by App.
 [] Add way to skip pixels that do not require updating

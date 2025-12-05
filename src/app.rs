@@ -35,7 +35,7 @@ impl App {
 
         let shader_render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
         // Set filter mode to linear to apply shading effect
-        shader_render_target.texture.set_filter(FilterMode::Nearest);
+        shader_render_target.texture.set_filter(FilterMode::Linear);
 
         // Create the camera which we use to render. The render target is attached to this camera
         let mut render_camera = Camera2D::from_display_rect(Rect {
