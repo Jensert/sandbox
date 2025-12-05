@@ -1,10 +1,11 @@
 use macroquad::{prelude::*, rand::RandGenerator};
 
-use crate::{RENDER_SIZE, brush::Brush, pixelgrid::ChunkGrid, ui::UserInterface};
+use crate::{
+    RENDER_SIZE, brush::Brush, mapgenerator::MapGenerator, pixelgrid::ChunkGrid, ui::UserInterface,
+};
 pub struct App {
     render_ratio: (f32, f32),
 
-    chunk_grid: ChunkGrid,
     render_target: RenderTarget,
     render_camera: Camera2D,
     default_camera: Camera2D,
@@ -14,12 +15,15 @@ pub struct App {
     should_quit: bool,
     total_scroll: f32,
 
+    chunk_grid: ChunkGrid,
+    map_generator: MapGenerator,
     brush: Brush,
     user_interface: UserInterface,
 }
 impl App {
     pub fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
         let chunk_grid = ChunkGrid::new(rng);
+        let map_generator = MapGenerator::default();
         // Create the texture to which we will draw
         // TODO Replace with Canvas2D
         let render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
@@ -46,7 +50,6 @@ impl App {
         Self {
             render_ratio,
 
-            chunk_grid,
             render_target,
             render_camera,
             default_camera,
@@ -56,6 +59,8 @@ impl App {
             should_quit: false,
             total_scroll: 0.0,
 
+            chunk_grid,
+            map_generator,
             brush: Brush::new(),
             user_interface: UserInterface::new(),
         }
@@ -78,6 +83,7 @@ impl App {
     pub fn draw_ui(&mut self, rng: &RandGenerator) {
         self.user_interface.draw(
             &mut self.chunk_grid,
+            &self.map_generator,
             &mut self.brush,
             self.mouse_world_position,
             &rng,

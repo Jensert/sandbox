@@ -1,4 +1,4 @@
-use crate::{CHUNK_SIZE, RENDER_SIZE, pixel::Pixel, pixeltype::PixelType};
+use crate::{CHUNK_SIZE, pixel::Pixel, pixeltype::PixelType};
 use macroquad::{
     prelude::*,
     rand::{ChooseRandom, RandGenerator},
@@ -102,99 +102,6 @@ impl ChunkGrid {
                                 }
                             }
                         }
-                    }
-                }
-            }
-        }
-    }
-
-    /// Generate a new pixel map
-    /// The map generates from bottom to top
-    pub fn generate_map(&mut self, rng: &RandGenerator) {
-        // Clear current map first
-        self.clear();
-
-        let width = RENDER_SIZE.0 as i32;
-        let height = RENDER_SIZE.1 as i32;
-
-        let bottom = 190; // bottom most layer
-        let layer_1 = 135;
-        let layer_2 = 90;
-        let layer_3 = 72;
-        let layer_4 = 45; // top most layer
-
-        // Stone layer
-        for y in layer_2..bottom {
-            for x in 0..width {
-                let pos = Vec2::new(x as f32, y as f32);
-                let chunk_pos = ChunkPosition::from_world_position(pos);
-
-                if let Some(chunk) = self.grid.get_mut(&chunk_pos.chunk_key) {
-                    chunk.set(
-                        chunk_pos.chunk_coordinate.0,
-                        chunk_pos.chunk_coordinate.1,
-                        Pixel::from_pixel_type(PixelType::Stone, &rng),
-                    );
-                }
-            }
-        }
-
-        // Generate middle dirt layer
-        let dirt_probability = |y: i32| -> f32 {
-            let y_fade = (layer_4 + layer_1) / 2;
-            if y > layer_4 {
-                return 0.0;
-            }
-
-            let t = (y_fade - y) as f32;
-            let p = 0.1122 * t * t - 0.0019 * t;
-
-            p.clamp(0.0, 1.0)
-        };
-
-        for y in layer_4..layer_1 {
-            let chance = dirt_probability(y);
-            for x in 0..width {
-                if rng.gen_range(0.0, 1.0) < chance {
-                    let pos = Vec2::new(x as f32, y as f32);
-                    let chunk_pos = ChunkPosition::from_world_position(pos);
-
-                    if let Some(chunk) = self.grid.get_mut(&chunk_pos.chunk_key) {
-                        chunk.set(
-                            chunk_pos.chunk_coordinate.0,
-                            chunk_pos.chunk_coordinate.1,
-                            Pixel::from_pixel_type(PixelType::Dirt, &rng),
-                        );
-                    }
-                }
-            }
-        }
-
-        let grass_probability = |y: i32| -> f32 {
-            let y_fade = (layer_3 + layer_4) / 2;
-            if y > y_fade {
-                return 0.0;
-            }
-
-            let t = (y_fade - y) as f32;
-            let p = 0.0122 * t * t - 0.0019 * t;
-
-            p.clamp(0.0, 1.0)
-        };
-        for y in layer_4..layer_3 {
-            let chance = grass_probability(y);
-            println!("{chance}");
-            for x in 0..width {
-                if rng.gen_range(0.0, 1.0) < chance {
-                    // 8% chance
-                    let pos = Vec2::new(x as f32, y as f32);
-                    let chunk_pos = ChunkPosition::from_world_position(pos);
-                    if let Some(chunk) = self.grid.get_mut(&chunk_pos.chunk_key) {
-                        chunk.set(
-                            chunk_pos.chunk_coordinate.0,
-                            chunk_pos.chunk_coordinate.1,
-                            Pixel::from_pixel_type(PixelType::Grass, &rng),
-                        )
                     }
                 }
             }

@@ -1,4 +1,5 @@
 use crate::brush::Brush;
+use crate::mapgenerator::MapGenerator;
 use crate::pixelgrid::{ChunkGrid, ChunkPosition};
 use macroquad::prelude::*;
 use macroquad::rand::RandGenerator;
@@ -23,12 +24,13 @@ impl UserInterface {
     pub fn draw(
         &self,
         chunk_grid: &mut ChunkGrid,
+        map_generator: &MapGenerator,
         brush: &mut Brush,
         mouse_world_position: Vec2,
         rng: &RandGenerator,
     ) {
         if self.debug_enabled {
-            self.draw_debug(chunk_grid, brush, mouse_world_position, &rng)
+            self.draw_debug(chunk_grid, map_generator, brush, mouse_world_position, &rng)
         }
     }
 
@@ -37,6 +39,7 @@ impl UserInterface {
     fn draw_debug(
         &self,
         chunk_grid: &mut ChunkGrid,
+        map_generator: &MapGenerator,
         brush: &mut Brush,
         mouse_world_position: Vec2,
         rng: &RandGenerator,
@@ -60,7 +63,7 @@ impl UserInterface {
                     chunk_grid.clear();
                 }
                 if ui.button(None, "Generate map") {
-                    chunk_grid.generate_map(&rng);
+                    map_generator.generate_map(chunk_grid, rng);
                 }
                 // Current selected pixel to be drawn
                 ui.label(
