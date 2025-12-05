@@ -1,4 +1,7 @@
-use macroquad::{color::Color, rand::RandGenerator};
+use macroquad::{
+    color::{Color, RED},
+    rand::RandGenerator,
+};
 
 use crate::{
     pixel::Pixel,
@@ -8,6 +11,7 @@ use crate::{
 const PIXEL_ORDER: &[PixelType] = &[
     PixelType::Sand,
     PixelType::Water,
+    PixelType::Lava,
     PixelType::Dirt,
     PixelType::Stone,
     PixelType::HardStone,
@@ -20,6 +24,7 @@ pub enum PixelType {
 
     Sand,
     Water,
+    Lava,
     Dirt,
     Stone,
     HardStone,
@@ -41,6 +46,7 @@ impl PixelType {
 
             PixelType::Sand => "Sand",
             PixelType::Water => "Water",
+            PixelType::Lava => "Lava",
             PixelType::Dirt => "Dirt",
             PixelType::Stone => "Stone",
             PixelType::HardStone => "Hard Stone",
@@ -67,19 +73,10 @@ impl PixelType {
         match self {
             PixelType::Sand => Color::new(rng.gen_range(0.7, 0.9), 0.69, 0.51, 1.00), // Beige
             PixelType::Water => Color::new(0.00, 0.47, rng.gen_range(0.89, 0.99), 1.00), // Blue
+            PixelType::Lava => Color::new(rng.gen_range(0.65, 0.75), 0.25, 0.05, 1.00), // Red
             PixelType::Dirt => Color::new(rng.gen_range(0.25, 0.35), 0.25, 0.18, 1.00), // Darkbrown
-            PixelType::Stone => Color::new(
-                rng.gen_range(0.48, 0.53),
-                rng.gen_range(0.48, 0.53),
-                rng.gen_range(0.48, 0.53),
-                1.00,
-            ), // Gray
-            PixelType::HardStone => Color::new(
-                rng.gen_range(0.18, 0.20),
-                rng.gen_range(0.18, 0.25),
-                rng.gen_range(0.18, 0.33),
-                1.00,
-            ), // Dark Gray
+            PixelType::Stone => Color::new(0.5, 0.5, rng.gen_range(0.48, 0.53), 1.00), // Gray
+            PixelType::HardStone => Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Dark Gray
             PixelType::Grass => Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
             PixelType::Air => Color {
                 r: 0.0,

@@ -6,8 +6,11 @@ use crate::{
 pub struct App {
     render_ratio: (f32, f32),
 
-    render_target: RenderTarget,
+    object_render_target: RenderTarget,
+    shader_render_target: RenderTarget,
+
     render_camera: Camera2D,
+    shader_camera: Camera2D,
     default_camera: Camera2D,
 
     mouse_world_position: Vec2,
@@ -24,11 +27,16 @@ impl App {
     pub fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
         let chunk_grid = ChunkGrid::new(rng);
         let map_generator = MapGenerator::default();
+
         // Create the texture to which we will draw
-        // TODO Replace with Canvas2D
-        let render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
+        let object_render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
         // Set filter mode to nearest to prevent blurry pixels
-        render_target.texture.set_filter(FilterMode::Nearest);
+        object_render_target.texture.set_filter(FilterMode::Nearest);
+
+        let shader_render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
+        // Set filter mode to linear to apply shading effect
+        shader_render_target.texture.set_filter(FilterMode::Nearest);
+
         // Create the camera which we use to render. The render target is attached to this camera
         let mut render_camera = Camera2D::from_display_rect(Rect {
             x: 0.0,
@@ -37,7 +45,15 @@ impl App {
             h: RENDER_SIZE.1 as f32,
         });
         // Attach render target to this camera
-        render_camera.render_target = Some(render_target.clone());
+        render_camera.render_target = Some(object_render_target.clone());
+        let mut shader_camera = Camera2D::from_display_rect(Rect {
+            x: 0.0,
+            y: 0.0,
+            w: RENDER_SIZE.0 as f32, // this camera's viewport has the render dimensions
+            h: RENDER_SIZE.1 as f32,
+        });
+        shader_camera.render_target = Some(shader_render_target.clone());
+
         // Create camera which we use to draw the final texture.
         // This camera is essentially our screen, whereas the render_camera is the viewport
         // The render_camera is then scaled to our screen dimensions during drawing
@@ -50,8 +66,11 @@ impl App {
         Self {
             render_ratio,
 
-            render_target,
+            object_render_target,
+            shader_render_target,
+
             render_camera,
+            shader_camera,
             default_camera,
 
             mouse_world_position: Vec2 { x: 0.0, y: 0.0 },
@@ -181,17 +200,19 @@ impl App {
     }
 
     pub fn stop_drawing(&self) {
+        set_camera(&self.shader_camera);
+
         set_camera(&self.default_camera);
 
         draw_texture_ex(
-            &self.render_target.texture,
+            &self.object_render_target.texture,
             0.0,
             0.0,
             WHITE,
             DrawTextureParams {
                 dest_size: Some(vec2(
-                    self.render_target.texture.width() * self.render_ratio.0, // We multiply the texture's dimensions by 4
-                    self.render_target.texture.height() * self.render_ratio.1, // Because the texture is a quarter of the size
+                    self.object_render_target.texture.width() * self.render_ratio.0, // We multiply the texture's dimensions by 4
+                    self.object_render_target.texture.height() * self.render_ratio.1, // Because the texture is a quarter of the size
                 )),
                 flip_y: true,
                 ..Default::default()

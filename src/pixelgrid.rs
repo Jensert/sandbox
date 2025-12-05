@@ -321,7 +321,8 @@ impl Chunk {
 
     /// Update the chunks texture
     /// Currently this is called every frame.
-    /// Should probably only be called if there is a change in the chunk
+    /// Should probably only be called if there is a change in the chunk,
+    /// but this is fine for now
     pub fn update_texture(&mut self) {
         let mut image = Image::gen_image_color(
             CHUNK_SIZE.0 as u16,

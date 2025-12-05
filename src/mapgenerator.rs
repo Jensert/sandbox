@@ -142,7 +142,7 @@ impl MapLayerRule {
             LayerType::LavaLayer => {
                 let y_start = 140;
                 let y_end = 180;
-                let pixel_type = PixelType::Water;
+                let pixel_type = PixelType::Lava;
                 return Self {
                     y_start,
                     y_end,
