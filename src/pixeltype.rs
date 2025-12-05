@@ -4,6 +4,16 @@ use crate::{
     pixel::Pixel,
     pixelgrid::{Chunk, GridMovement},
 };
+
+const PIXEL_ORDER: &[PixelType] = &[
+    PixelType::Sand,
+    PixelType::Water,
+    PixelType::Dirt,
+    PixelType::Stone,
+    PixelType::HardStone,
+    PixelType::Grass,
+];
+
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum PixelType {
     Air,
@@ -12,15 +22,9 @@ pub enum PixelType {
     Water,
     Dirt,
     Stone,
+    HardStone,
     Grass,
 }
-const PIXEL_ORDER: &[PixelType] = &[
-    PixelType::Sand,
-    PixelType::Water,
-    PixelType::Dirt,
-    PixelType::Stone,
-    PixelType::Grass,
-];
 impl PixelType {
     pub fn next(&mut self) {
         let idx = PIXEL_ORDER.iter().position(|p| p == self).unwrap();
@@ -39,6 +43,7 @@ impl PixelType {
             PixelType::Water => "Water",
             PixelType::Dirt => "Dirt",
             PixelType::Stone => "Stone",
+            PixelType::HardStone => "Hard Stone",
             PixelType::Grass => "Grass",
         }
     }
@@ -64,11 +69,17 @@ impl PixelType {
             PixelType::Water => Color::new(0.00, 0.47, rng.gen_range(0.89, 0.99), 1.00), // Blue
             PixelType::Dirt => Color::new(rng.gen_range(0.25, 0.35), 0.25, 0.18, 1.00), // Darkbrown
             PixelType::Stone => Color::new(
-                rng.gen_range(0.48, 0.53),
-                rng.gen_range(0.48, 0.53),
-                rng.gen_range(0.48, 0.53),
+                rng.gen_range(0.38, 0.43),
+                rng.gen_range(0.38, 0.43),
+                rng.gen_range(0.38, 0.43),
                 1.00,
             ), // Gray
+            PixelType::HardStone => Color::new(
+                rng.gen_range(0.18, 0.20),
+                rng.gen_range(0.18, 0.25),
+                rng.gen_range(0.18, 0.33),
+                1.00,
+            ), // Dark Gray
             PixelType::Grass => Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
             PixelType::Air => Color {
                 r: 0.0,

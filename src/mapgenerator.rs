@@ -130,7 +130,7 @@ impl MapLayerRule {
             LayerType::DeepLayer => {
                 let y_start = 100;
                 let y_end = 140;
-                let pixel_type = PixelType::Sand;
+                let pixel_type = PixelType::HardStone;
                 return Self {
                     y_start,
                     y_end,
