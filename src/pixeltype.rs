@@ -6,43 +6,40 @@ use crate::{
 };
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum PixelType {
+    Air,
+
     Sand,
     Water,
-    Air,
     Dirt,
     Stone,
     Grass,
 }
+const PIXEL_ORDER: &[PixelType] = &[
+    PixelType::Sand,
+    PixelType::Water,
+    PixelType::Dirt,
+    PixelType::Stone,
+    PixelType::Grass,
+];
 impl PixelType {
     pub fn next(&mut self) {
-        match *self {
-            PixelType::Sand => *self = PixelType::Water,
-            PixelType::Water => *self = PixelType::Dirt,
-            PixelType::Dirt => *self = PixelType::Stone,
-            PixelType::Stone => *self = PixelType::Grass,
-            PixelType::Grass => *self = PixelType::Sand,
-            _ => (),
-        }
-    }
-    pub fn previous(&mut self) {
-        match *self {
-            PixelType::Sand => *self = PixelType::Grass,
-            PixelType::Grass => *self = PixelType::Stone,
-            PixelType::Stone => *self = PixelType::Dirt,
-            PixelType::Dirt => *self = PixelType::Water,
-            PixelType::Water => *self = PixelType::Sand,
-            _ => (),
-        }
+        let idx = PIXEL_ORDER.iter().position(|p| p == self).unwrap();
+        *self = PIXEL_ORDER[(idx + 1) % PIXEL_ORDER.len()];
     }
 
+    pub fn previous(&mut self) {
+        let idx = PIXEL_ORDER.iter().position(|p| p == self).unwrap();
+        *self = PIXEL_ORDER[(idx + PIXEL_ORDER.len() - 1) % PIXEL_ORDER.len()];
+    }
     pub fn to_str(&self) -> &str {
         match self {
+            PixelType::Air => "Air",
+
             PixelType::Sand => "Sand",
             PixelType::Water => "Water",
             PixelType::Dirt => "Dirt",
             PixelType::Stone => "Stone",
             PixelType::Grass => "Grass",
-            PixelType::Air => "Air",
         }
     }
 
