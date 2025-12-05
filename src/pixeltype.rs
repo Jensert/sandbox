@@ -69,9 +69,9 @@ impl PixelType {
             PixelType::Water => Color::new(0.00, 0.47, rng.gen_range(0.89, 0.99), 1.00), // Blue
             PixelType::Dirt => Color::new(rng.gen_range(0.25, 0.35), 0.25, 0.18, 1.00), // Darkbrown
             PixelType::Stone => Color::new(
-                rng.gen_range(0.38, 0.43),
-                rng.gen_range(0.38, 0.43),
-                rng.gen_range(0.38, 0.43),
+                rng.gen_range(0.48, 0.53),
+                rng.gen_range(0.48, 0.53),
+                rng.gen_range(0.48, 0.53),
                 1.00,
             ), // Gray
             PixelType::HardStone => Color::new(
