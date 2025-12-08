@@ -3,6 +3,48 @@ use macroquad::{prelude::*, rand::RandGenerator};
 use crate::{
     RENDER_SIZE, brush::Brush, mapgenerator::MapGenerator, pixelgrid::ChunkGrid, ui::UserInterface,
 };
+
+const LENS_FRAGMENT_SHADER: &'static str = r#"#version 100
+precision lowp float;
+
+varying vec2 uv;
+varying vec2 uv_screen;
+varying vec2 center;
+
+uniform sampler2D _ScreenTexture;
+
+void main() {
+    float gradient = length(uv);
+    vec2 uv_zoom = (uv_screen - center) * gradient + center;
+
+    gl_FragColor = texture2D(_ScreenTexture, uv_zoom);
+}
+"#;
+
+const LENS_VERTEX_SHADER: &'static str = "#version 100
+attribute vec3 position;
+attribute vec2 texcoord;
+
+varying lowp vec2 center;
+varying lowp vec2 uv;
+varying lowp vec2 uv_screen;
+
+uniform mat4 Model;
+uniform mat4 Projection;
+
+uniform vec2 Center;
+
+void main() {
+    vec4 res = Projection * Model * vec4(position, 1);
+    vec4 c = Projection * Model * vec4(Center, 0, 1);
+
+    uv_screen = res.xy / 2.0 + vec2(0.5, 0.5);
+    center = c.xy / 2.0 + vec2(0.5, 0.5);
+    uv = texcoord;
+
+    gl_Position = res;
+}
+";
 pub struct App {
     render_ratio: (f32, f32),
 
@@ -32,48 +74,13 @@ impl App {
         // Set filter mode to nearest to prevent blurry pixels
         render_target.texture.set_filter(FilterMode::Nearest);
 
-        let vertex_shader = r#"#version 100
-attribute vec2 position;
-attribute vec2 texcoord;
-
-uniform mat4 projection; // <-- important
-
-varying vec2 uv;
-
-void main() {
-    uv = texcoord;
-    gl_Position = projection * vec4(position, 0.0, 1.0);
-}"#;
-
-        let fragment_shader = r#"#version 100
-precision mediump float;
-
-varying vec2 uv;
-uniform sampler2D tex;
-uniform vec2 texelSize; 
-
-void main() {
-    vec3 sum = vec3(0.0);
-
-    // simple 3x3 box blur
-    for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= 1; y++) {
-            vec2 offset = vec2(float(x), float(y)) * texelSize;
-            sum += texture2D(tex, uv + offset).rgb;
-        }
-    }
-
-    gl_FragColor = vec4(sum / 9.0, 1.0);
-}"#;
-
         let material = load_material(
             ShaderSource::Glsl {
-                vertex: vertex_shader,
-                fragment: fragment_shader,
+                vertex: &LENS_VERTEX_SHADER,
+                fragment: &LENS_FRAGMENT_SHADER,
             },
             MaterialParams {
-                uniforms: vec![UniformDesc::new("texelSize", UniformType::Float2)],
-                textures: vec!["tex".to_string()],
+                uniforms: vec![UniformDesc::new("Center", UniformType::Float2)],
                 ..Default::default()
             },
         )
@@ -240,16 +247,6 @@ void main() {
     pub fn stop_drawing(&self) {
         set_camera(&self.default_camera);
 
-        let texture = self.render_target.texture.clone();
-        self.shader.set_texture("tex", texture);
-        let texel_size = Vec2::new(
-            1.0 / self.render_target.texture.width(),
-            1.0 / self.render_target.texture.height(),
-        );
-        self.shader.set_uniform("texelSize", texel_size);
-
-        gl_use_material(&self.shader);
-
         draw_texture_ex(
             &self.render_target.texture,
             0.0,
@@ -265,6 +262,12 @@ void main() {
             },
         );
 
+        let lens_center = mouse_position();
+
+        self.shader.set_uniform("Center", lens_center);
+
+        gl_use_material(&self.shader);
+        draw_circle(lens_center.0, lens_center.1, 250.0, RED);
         gl_use_default_material();
     }
 
