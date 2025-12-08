@@ -55,7 +55,7 @@ async fn main() {
         // All drawing logic goes after this
         clear_background(SKYBLUE);
         // Draw the pixel chunks
-        app.chunks().draw(shader_strength);
+        app.chunks().draw();
         // Draw the UI.
         app.draw_ui(&rng);
         // Stop the current draw call

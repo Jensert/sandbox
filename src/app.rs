@@ -6,11 +6,10 @@ use crate::{
 pub struct App {
     render_ratio: (f32, f32),
 
-    object_render_target: RenderTarget,
-    shader_render_target: RenderTarget,
+    render_target: RenderTarget,
+    shader: Material,
 
     render_camera: Camera2D,
-    shader_camera: Camera2D,
     default_camera: Camera2D,
 
     mouse_world_position: Vec2,
@@ -29,13 +28,56 @@ impl App {
         let map_generator = MapGenerator::default();
 
         // Create the texture to which we will draw
-        let object_render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
+        let render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
         // Set filter mode to nearest to prevent blurry pixels
-        object_render_target.texture.set_filter(FilterMode::Nearest);
+        render_target.texture.set_filter(FilterMode::Nearest);
 
-        let shader_render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
-        // Set filter mode to linear to apply shading effect
-        shader_render_target.texture.set_filter(FilterMode::Linear);
+        let vertex_shader = r#"#version 100
+attribute vec2 position;
+attribute vec2 texcoord;
+
+uniform mat4 projection; // <-- important
+
+varying vec2 uv;
+
+void main() {
+    uv = texcoord;
+    gl_Position = projection * vec4(position, 0.0, 1.0);
+}"#;
+
+        let fragment_shader = r#"#version 100
+precision mediump float;
+
+varying vec2 uv;
+uniform sampler2D tex;
+uniform vec2 texelSize; 
+
+void main() {
+    vec3 sum = vec3(0.0);
+
+    // simple 3x3 box blur
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            vec2 offset = vec2(float(x), float(y)) * texelSize;
+            sum += texture2D(tex, uv + offset).rgb;
+        }
+    }
+
+    gl_FragColor = vec4(sum / 9.0, 1.0);
+}"#;
+
+        let material = load_material(
+            ShaderSource::Glsl {
+                vertex: vertex_shader,
+                fragment: fragment_shader,
+            },
+            MaterialParams {
+                uniforms: vec![UniformDesc::new("texelSize", UniformType::Float2)],
+                textures: vec!["tex".to_string()],
+                ..Default::default()
+            },
+        )
+        .unwrap();
 
         // Create the camera which we use to render. The render target is attached to this camera
         let mut render_camera = Camera2D::from_display_rect(Rect {
@@ -45,14 +87,7 @@ impl App {
             h: RENDER_SIZE.1 as f32,
         });
         // Attach render target to this camera
-        render_camera.render_target = Some(object_render_target.clone());
-        let mut shader_camera = Camera2D::from_display_rect(Rect {
-            x: 0.0,
-            y: 0.0,
-            w: RENDER_SIZE.0 as f32, // this camera's viewport has the render dimensions
-            h: RENDER_SIZE.1 as f32,
-        });
-        shader_camera.render_target = Some(shader_render_target.clone());
+        render_camera.render_target = Some(render_target.clone());
 
         // Create camera which we use to draw the final texture.
         // This camera is essentially our screen, whereas the render_camera is the viewport
@@ -66,11 +101,10 @@ impl App {
         Self {
             render_ratio,
 
-            object_render_target,
-            shader_render_target,
+            render_target,
+            shader: material,
 
             render_camera,
-            shader_camera,
             default_camera,
 
             mouse_world_position: Vec2 { x: 0.0, y: 0.0 },
@@ -204,24 +238,34 @@ impl App {
     }
 
     pub fn stop_drawing(&self) {
-        set_camera(&self.shader_camera);
-
         set_camera(&self.default_camera);
 
+        let texture = self.render_target.texture.clone();
+        self.shader.set_texture("tex", texture);
+        let texel_size = Vec2::new(
+            1.0 / self.render_target.texture.width(),
+            1.0 / self.render_target.texture.height(),
+        );
+        self.shader.set_uniform("texelSize", texel_size);
+
+        gl_use_material(&self.shader);
+
         draw_texture_ex(
-            &self.object_render_target.texture,
+            &self.render_target.texture,
             0.0,
             0.0,
             WHITE,
             DrawTextureParams {
                 dest_size: Some(vec2(
-                    self.object_render_target.texture.width() * self.render_ratio.0, // We multiply the texture's dimensions by 4
-                    self.object_render_target.texture.height() * self.render_ratio.1, // Because the texture is a quarter of the size
+                    self.render_target.texture.width() * self.render_ratio.0, // We multiply the texture's dimensions by 4
+                    self.render_target.texture.height() * self.render_ratio.1, // Because the texture is a quarter of the size
                 )),
                 flip_y: true,
                 ..Default::default()
             },
         );
+
+        gl_use_default_material();
     }
 
     pub fn update(&mut self, rng: &RandGenerator) {

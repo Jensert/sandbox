@@ -132,9 +132,9 @@ impl ChunkGrid {
         res
     }
 
-    pub fn draw(&self, shader_strength: f32) {
+    pub fn draw(&self) {
         for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
-            chunk.draw(*chunk_key_x, *chunk_key_y, shader_strength);
+            chunk.draw(*chunk_key_x, *chunk_key_y);
         }
     }
 
@@ -384,7 +384,7 @@ impl Chunk {
 
     /// Draw the chunk's texture to the screen in the appropriate coordinates
     /// The chunk key are transformed to screen coordinates
-    pub fn draw(&self, chunk_key_x: i32, chunk_key_y: i32, shader_strength: f32) {
+    pub fn draw(&self, chunk_key_x: i32, chunk_key_y: i32) {
         let chunk_x = chunk_key_x * CHUNK_SIZE.0 as i32;
         let chunk_y = chunk_key_y * CHUNK_SIZE.1 as i32;
 
@@ -398,15 +398,6 @@ impl Chunk {
             },
         );
 
-        draw_texture_ex(
-            &self.shader_texture,
-            chunk_x as f32,
-            chunk_y as f32,
-            Color::new(1.0, 1.0, 1.0, shader_strength),
-            DrawTextureParams {
-                ..Default::default()
-            },
-        );
         /*
         // Here we loop over the pixel grid to draw all the pixels
         for y in 0..CHUNK_SIZE.1 {
