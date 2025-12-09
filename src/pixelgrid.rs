@@ -465,11 +465,13 @@ impl Chunk {
         self.chunk[index] = Pixel::empty();
         old
     }
+
     pub fn clear(&mut self) {
         self.chunk.clear();
         for _ in 0..CHUNK_SIZE.0 {
             for _ in 0..CHUNK_SIZE.1 {
                 self.chunk.push(Pixel::empty());
+                self.updated_last_frame = true;
             }
         }
     }

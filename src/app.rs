@@ -1,54 +1,18 @@
-use macroquad::{prelude::*, rand::RandGenerator};
+use std::fs::{read, read_to_string};
+
+use macroquad::{miniquad::window::screen_size, prelude::*, rand::RandGenerator};
 
 use crate::{
     RENDER_SIZE, brush::Brush, mapgenerator::MapGenerator, pixelgrid::ChunkGrid, ui::UserInterface,
 };
 
-const LENS_FRAGMENT_SHADER: &'static str = r#"#version 100
-precision lowp float;
-
-varying vec2 uv;
-varying vec2 uv_screen;
-varying vec2 center;
-
-uniform sampler2D _ScreenTexture;
-
-void main() {
-    float gradient = length(uv);
-    vec2 uv_zoom = (uv_screen - center) * gradient + center;
-
-    gl_FragColor = texture2D(_ScreenTexture, uv_zoom);
-}
-"#;
-
-const LENS_VERTEX_SHADER: &'static str = "#version 100
-attribute vec3 position;
-attribute vec2 texcoord;
-
-varying lowp vec2 center;
-varying lowp vec2 uv;
-varying lowp vec2 uv_screen;
-
-uniform mat4 Model;
-uniform mat4 Projection;
-
-uniform vec2 Center;
-
-void main() {
-    vec4 res = Projection * Model * vec4(position, 1);
-    vec4 c = Projection * Model * vec4(Center, 0, 1);
-
-    uv_screen = res.xy / 2.0 + vec2(0.5, 0.5);
-    center = c.xy / 2.0 + vec2(0.5, 0.5);
-    uv = texcoord;
-
-    gl_Position = res;
-}
-";
 pub struct App {
     render_ratio: (f32, f32),
 
     render_target: RenderTarget,
+
+    vertex_shader: String,
+    fragment_shader: String,
     shader: Material,
 
     render_camera: Camera2D,
@@ -66,25 +30,28 @@ pub struct App {
 }
 impl App {
     pub fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
-        let chunk_grid = ChunkGrid::new(rng);
+        let mut chunk_grid = ChunkGrid::new(rng);
         let map_generator = MapGenerator::default();
+        map_generator.generate_map(&mut chunk_grid, rng);
 
         // Create the texture to which we will draw
         let render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
         // Set filter mode to nearest to prevent blurry pixels
         render_target.texture.set_filter(FilterMode::Nearest);
 
-        let material = load_material(
+        let vertex_shader = read_to_string("src/vertex.glsl").expect("expected vertex glsl shader");
+        let fragment_shader =
+            read_to_string("src/fragment.glsl").expect("expected fragment glsl shader");
+        let shader = load_material(
             ShaderSource::Glsl {
-                vertex: &LENS_VERTEX_SHADER,
-                fragment: &LENS_FRAGMENT_SHADER,
+                vertex: &vertex_shader,
+                fragment: &fragment_shader,
             },
             MaterialParams {
-                uniforms: vec![UniformDesc::new("Center", UniformType::Float2)],
                 ..Default::default()
             },
         )
-        .unwrap();
+        .expect("expected a proper GLSL ShaderSource");
 
         // Create the camera which we use to render. The render target is attached to this camera
         let mut render_camera = Camera2D::from_display_rect(Rect {
@@ -105,11 +72,15 @@ impl App {
             w: screen_width(), // this camera's viewport has the screen dimensions
             h: -screen_height(),
         });
+
         Self {
             render_ratio,
 
             render_target,
-            shader: material,
+
+            vertex_shader,
+            fragment_shader,
+            shader,
 
             render_camera,
             default_camera,
@@ -142,6 +113,27 @@ impl App {
 
     pub fn user_interface(&self) -> &UserInterface {
         &self.user_interface
+    }
+
+    pub fn user_interface_mut(&mut self) -> &mut UserInterface {
+        &mut self.user_interface
+    }
+
+    pub fn compile_shader(&mut self, vertex_shader: String, fragment_shader: String) {
+        println!("Recompiling shader program");
+
+        let shader = load_material(
+            ShaderSource::Glsl {
+                vertex: &vertex_shader,
+                fragment: &fragment_shader,
+            },
+            MaterialParams {
+                ..Default::default()
+            },
+        )
+        .expect("expected a proper GLSL ShaderSource");
+
+        self.shader = shader;
     }
 
     pub fn draw_ui(&mut self, rng: &RandGenerator) {
@@ -233,6 +225,10 @@ impl App {
         if is_key_pressed(KeyCode::GraveAccent) {
             self.user_interface.toggle_debug();
         }
+
+        if is_key_released(KeyCode::R) {
+            self.user_interface_mut().read_shader_files();
+        }
     }
 
     pub fn handle_input(&mut self, rng: &RandGenerator) {
@@ -245,6 +241,10 @@ impl App {
     }
 
     pub fn stop_drawing(&self) {
+        let texture_vec = vec2(
+            self.render_target.texture.width() * self.render_ratio.0, // We multiply the texture's dimensions by 4
+            self.render_target.texture.height() * self.render_ratio.1, // Because the texture is a quarter of the size
+        );
         set_camera(&self.default_camera);
 
         draw_texture_ex(
@@ -253,26 +253,27 @@ impl App {
             0.0,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(vec2(
-                    self.render_target.texture.width() * self.render_ratio.0, // We multiply the texture's dimensions by 4
-                    self.render_target.texture.height() * self.render_ratio.1, // Because the texture is a quarter of the size
-                )),
-                flip_y: true,
+                dest_size: Some(texture_vec),
+                flip_y: true, // Fip y is necessary because macroquad cameras with render targets flip their Y coordinates
                 ..Default::default()
             },
         );
 
-        let lens_center = mouse_position();
-
-        self.shader.set_uniform("Center", lens_center);
-
-        gl_use_material(&self.shader);
-        draw_circle(lens_center.0, lens_center.1, 250.0, RED);
-        gl_use_default_material();
+        if self.user_interface().data().shader_enabled {
+            // Apply shader
+            gl_use_material(&self.shader);
+            draw_rectangle(0.0, texture_vec.y, texture_vec.x, -texture_vec.y, RED); // Draw texture with flipped Y again, because shader texture is flipped aswell
+            gl_use_default_material();
+        }
     }
 
     pub fn update(&mut self, rng: &RandGenerator) {
-        self.chunks_mut().update(rng)
+        self.chunks_mut().update(rng);
+        let frag = self.user_interface().data().fragment_shader;
+        let vert = self.user_interface().data().vertex_shader;
+        if self.fragment_shader != frag || self.vertex_shader != vert {
+            self.compile_shader(vert, frag);
+        }
     }
 
     pub fn chunks(&self) -> &ChunkGrid {

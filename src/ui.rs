@@ -1,3 +1,6 @@
+use std::fs::read_to_string;
+use std::ops::DerefMut;
+
 use crate::brush::Brush;
 use crate::mapgenerator::MapGenerator;
 use crate::pixelgrid::{ChunkGrid, ChunkPosition};
@@ -6,18 +9,26 @@ use macroquad::rand::RandGenerator;
 use macroquad::ui::{hash, root_ui, widgets};
 pub struct UserInterface {
     debug_enabled: bool,
-    shader_strength: f32,
+    shader_enabled: bool,
+    vertex_shader: String,
+    fragment_shader: String,
 }
 pub struct UserInterfaceData {
     pub debug_enabled: bool,
-    pub shader_strength: f32,
+    pub shader_enabled: bool,
+    pub vertex_shader: String,
+    pub fragment_shader: String,
 }
 
 impl UserInterface {
     pub fn new() -> Self {
         Self {
-            debug_enabled: false,
-            shader_strength: 0.5,
+            debug_enabled: true,
+            shader_enabled: false,
+            vertex_shader: read_to_string("src/vertex.glsl")
+                .expect("expected a vertex glsl shader"),
+            fragment_shader: read_to_string("src/fragment.glsl")
+                .expect("expected a fragment glsl shader"),
         }
     }
 
@@ -25,10 +36,24 @@ impl UserInterface {
         self.debug_enabled = !self.debug_enabled;
     }
 
+    pub fn toggle_shader(&mut self) {
+        self.shader_enabled = !self.shader_enabled;
+    }
+
+    pub fn read_shader_files(&mut self) {
+        println!("Reloading shader files");
+        self.fragment_shader =
+            read_to_string("src/fragment.glsl").expect("expected a fragment glsl shader");
+        self.vertex_shader =
+            read_to_string("src/vertex.glsl").expect("expected a vertex glsl shader");
+    }
+
     pub fn data(&self) -> UserInterfaceData {
         UserInterfaceData {
             debug_enabled: self.debug_enabled,
-            shader_strength: self.shader_strength,
+            shader_enabled: self.shader_enabled,
+            vertex_shader: self.vertex_shader.clone(),
+            fragment_shader: self.fragment_shader.clone(),
         }
     }
 
@@ -62,6 +87,8 @@ impl UserInterface {
             .movable(true)
             .titlebar(true)
             .ui(&mut *root_ui(), |ui| {
+                // General technical information
+                ui.separator();
                 // FPS
                 ui.label(None, format!("FPS: {}", get_fps()).as_str());
                 // Total pixels in world
@@ -69,40 +96,16 @@ impl UserInterface {
                     None,
                     format!("# Pixels: {}", chunk_grid.get_total_pixels()).as_str(),
                 );
-                ui.separator();
-
-                // Empty pixel grid
-                if ui.button(None, "Reset pixelgrid") {
-                    chunk_grid.clear();
-                }
-                if ui.button(None, "Generate map") {
-                    map_generator.generate_map(chunk_grid, rng);
-                }
-                ui.slider(1, "Shader strength", 0.0..1.0, &mut self.shader_strength);
-                // Current selected pixel to be drawn
-                ui.label(
-                    None,
-                    format!("Selected pixel: {}", brush.pixel_type().to_str()).as_str(),
-                );
-                // Current brush type
-                ui.label(
-                    None,
-                    format!("Selected brush type: {}", brush.brush_type().as_str()).as_str(),
-                );
-                // Current brush size
-                ui.label(None, format!("Brush size: {}", brush.size()).as_str());
                 // Mouse position (in screen pixels)
                 ui.label(
                     None,
                     format!("Mouse screen position: {:?}", mouse_position()).as_str(),
                 );
-                // Mouse position (in world coordinates)
                 ui.label(
                     None,
                     format!("Mouse world position: {:?}", mouse_world_position).as_str(),
                 );
                 let position = ChunkPosition::from_world_position(mouse_world_position);
-                // Mouse position (in chunk coordinates)
                 ui.label(
                     None,
                     format!(
@@ -111,6 +114,43 @@ impl UserInterface {
                     )
                     .as_str(),
                 );
+
+                // ChunkGrid functions
+                ui.separator();
+
+                if ui.button(None, "Reset pixelgrid") {
+                    chunk_grid.clear();
+                }
+                if ui.button(None, "Generate map") {
+                    map_generator.generate_map(chunk_grid, rng);
+                }
+
+                // Shader functions
+                ui.separator();
+
+                if ui.button(None, "Read shader files") {
+                    self.read_shader_files();
+                }
+                let shader_status = match self.shader_enabled {
+                    true => "ON",
+                    false => "OFF",
+                };
+                if ui.button(None, format!("Shader is {shader_status} - Toggle shader")) {
+                    self.toggle_shader();
+                }
+
+                // Brush information
+                ui.separator();
+
+                ui.label(
+                    None,
+                    format!("Selected pixel: {}", brush.pixel_type().to_str()).as_str(),
+                );
+                ui.label(
+                    None,
+                    format!("Selected brush type: {}", brush.brush_type().as_str()).as_str(),
+                );
+                ui.label(None, format!("Brush size: {}", brush.size()).as_str());
             });
     }
 }
