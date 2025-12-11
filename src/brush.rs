@@ -54,6 +54,13 @@ impl Brush {
         }
     }
 
+    pub fn erase(&self, world_position: Vec2, chunk_grid: &mut ChunkGrid) {
+        match self.brush_type {
+            BrushType::Pixel => self.erase_pixel(world_position, chunk_grid),
+            BrushType::Circle => self.erase_circle(self.brush_size, world_position, chunk_grid),
+        }
+    }
+
     pub fn draw_pixel(
         &self,
         world_position: Vec2,
@@ -84,6 +91,30 @@ impl Brush {
                 let dist = (dx * dx + dy * dy).sqrt();
                 if dist <= radius - 1.0 as f32 {
                     chunk_grid.set_pixel(center, self.pixel_type().to_pixel(rng));
+                }
+            }
+        }
+    }
+
+    pub fn erase_pixel(&self, world_position: Vec2, chunk_grid: &mut ChunkGrid) {
+        for y in 0..self.brush_size as i32 {
+            let dy = world_position.y + y as f32;
+            for x in 0..self.brush_size as i32 {
+                let dx = world_position.x + x as f32;
+                chunk_grid.erase_pixel(vec2(dx, dy))
+            }
+        }
+    }
+
+    pub fn erase_circle(&self, radius: f32, center: Vec2, chunk_grid: &mut ChunkGrid) {
+        // Naive circle drawing
+        for y in 0..CHUNK_SIZE.1 {
+            let dy = y as f32 - center.y;
+            for x in 0..CHUNK_SIZE.0 {
+                let dx = x as f32 - center.x;
+                let dist = (dx * dx + dy * dy).sqrt();
+                if dist <= radius - 1.0 as f32 {
+                    chunk_grid.erase_pixel(center);
                 }
             }
         }

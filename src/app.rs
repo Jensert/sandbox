@@ -163,9 +163,13 @@ impl App {
     fn handle_mouse_input(&mut self, rng: &RandGenerator) {
         self.mouse_world_position = self.mouse_to_world();
 
+        let mouse_world_position = self.mouse_world_position;
         if is_mouse_button_down(MouseButton::Left) {
             self.brush()
-                .draw(self.mouse_world_position, self.chunks_mut(), rng);
+                .draw(mouse_world_position, self.chunks_mut(), rng);
+        }
+        if is_mouse_button_down(MouseButton::Right) {
+            self.brush().erase(mouse_world_position, self.chunks_mut());
         }
 
         // Handle scrolling

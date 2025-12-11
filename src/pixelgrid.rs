@@ -153,6 +153,17 @@ impl ChunkGrid {
         );
     }
 
+    pub fn erase_pixel(&mut self, world_position: Vec2) {
+        let chunk_position = ChunkPosition::from_world_position(world_position);
+        self.grid
+            .get_mut(&chunk_position.chunk_key)
+            .unwrap()
+            .remove(
+                chunk_position.chunk_coordinate.0,
+                chunk_position.chunk_coordinate.1,
+            );
+    }
+
     /// Check if the grid position (world position) is free, chunk-wide
     /// This requires the supplied GridMovement struct to have a chunk key
     /// and a chunk coordinate
@@ -463,6 +474,7 @@ impl Chunk {
         let index = Chunk::index(x, y);
         let old = self.chunk[index];
         self.chunk[index] = Pixel::empty();
+        self.updated_last_frame = true;
         old
     }
 
