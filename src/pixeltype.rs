@@ -1,7 +1,13 @@
-use macroquad::{
-    color::{Color, RED},
-    rand::RandGenerator,
-};
+use macroquad::{color::Color, rand::RandGenerator};
+
+const LAVA: Color = Color::new(0.90, 0.16, 0.22, 1.00);
+const STONE: Color = Color::new(0.51, 0.51, 0.51, 1.00);
+const DEEPSTONE: Color = Color::new(0.31, 0.31, 0.31, 1.00);
+const GRASS: Color = Color::new(0.00, 0.46, 0.17, 1.00);
+const WATER: Color = Color::new(0.00, 0.47, 0.95, 1.00);
+const AIR: Color = Color::new(0.40, 0.75, 1.00, 1.00);
+const SAND: Color = Color::new(0.83, 0.69, 0.51, 1.00);
+const DIRT: Color = Color::new(0.30, 0.25, 0.18, 1.00);
 
 use crate::{
     pixel::Pixel,
@@ -71,13 +77,13 @@ impl PixelType {
     // }
     pub fn to_color_shade(&self, rng: &RandGenerator) -> Color {
         match self {
-            PixelType::Sand => Color::new(rng.gen_range(0.7, 0.9), 0.69, 0.51, 1.00), // Beige
-            PixelType::Water => Color::new(0.00, 0.47, rng.gen_range(0.89, 0.99), 1.00), // Blue
-            PixelType::Lava => Color::new(rng.gen_range(0.65, 0.75), 0.25, 0.05, 1.00), // Red
-            PixelType::Dirt => Color::new(rng.gen_range(0.25, 0.35), 0.25, 0.18, 1.00), // Darkbrown
-            PixelType::Stone => Color::new(0.5, 0.5, rng.gen_range(0.48, 0.53), 1.00), // Gray
-            PixelType::HardStone => Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Dark Gray
-            PixelType::Grass => Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
+            PixelType::Sand => SAND, //Color::new(rng.gen_range(0.7, 0.9), 0.69, 0.51, 1.00), // Beige
+            PixelType::Water => WATER, //Color::new(0.00, 0.47, rng.gen_range(0.89, 0.99), 1.00), // Blue
+            PixelType::Lava => LAVA, //Color::new(rng.gen_range(0.65, 0.75), 0.25, 0.05, 1.00), // Red
+            PixelType::Dirt => DIRT, //Color::new(rng.gen_range(0.25, 0.35), 0.25, 0.18, 1.00), // Darkbrown
+            PixelType::Stone => STONE, //Color::new(0.5, 0.5, rng.gen_range(0.48, 0.53), 1.00), // Gray
+            PixelType::HardStone => DEEPSTONE, //Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Dark Gray
+            PixelType::Grass => GRASS, //Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
             PixelType::Air => Color {
                 r: 0.0,
                 g: 0.0,

@@ -241,12 +241,12 @@ impl App {
     }
 
     pub fn stop_drawing(&self) {
+        set_camera(&self.default_camera);
+
         let texture_vec = vec2(
             self.render_target.texture.width() * self.render_ratio.0, // We multiply the texture's dimensions by 4
             self.render_target.texture.height() * self.render_ratio.1, // Because the texture is a quarter of the size
         );
-        set_camera(&self.default_camera);
-
         draw_texture_ex(
             &self.render_target.texture,
             0.0,
@@ -262,7 +262,17 @@ impl App {
         if self.user_interface().data().shader_enabled {
             // Apply shader
             gl_use_material(&self.shader);
-            draw_rectangle(0.0, texture_vec.y, texture_vec.x, -texture_vec.y, RED); // Draw texture with flipped Y again, because shader texture is flipped aswell
+            draw_texture_ex(
+                &self.render_target.texture,
+                0.0,
+                0.0,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(texture_vec),
+                    flip_y: true, // Fip y is necessary because macroquad cameras with render targets flip their Y coordinates
+                    ..Default::default()
+                },
+            );
             gl_use_default_material();
         }
     }
