@@ -97,7 +97,8 @@ vec4 drawDirt(vec2 uv) {
     float variation = (rnd - 0.5) * 0.06;
     return vec4(base + variation, 1.0);
 }
-vec4 sampleTexture(vec2 uv, vec4 color) {
+
+vec4 sampleColor(vec2 uv, vec4 color) {
     float tolerance = 0.05;
 
     if (distance(color, STONE) < tolerance)      return drawStone(uv);
@@ -114,5 +115,5 @@ vec4 sampleTexture(vec2 uv, vec4 color) {
 
 void main() {
     vec4 screenColor = texture2D(_ScreenTexture, uv);
-    gl_FragColor = sampleTexture(uv, screenColor);
+    gl_FragColor = sampleColor(uv, screenColor);
 }

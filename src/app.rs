@@ -16,15 +16,6 @@ pub struct App {
     fragment_shader: String,
     shader: Material,
 
-    tex_lava: Texture2D,
-    tex_stone: Texture2D,
-    tex_deepstone: Texture2D,
-    tex_grass: Texture2D,
-    tex_water: Texture2D,
-    tex_air: Texture2D,
-    tex_sand: Texture2D,
-    tex_dirt: Texture2D,
-
     render_camera: Camera2D,
     default_camera: Camera2D,
 
@@ -43,32 +34,6 @@ impl App {
         let map_generator = MapGenerator::default();
         map_generator.generate_map(&mut chunk_grid, rng);
 
-        println!("Loading textures");
-        let tex_lava = load_texture("textures/Lava.png")
-            .await
-            .expect("Expected a compatible texture file");
-        let tex_stone = load_texture("textures/StoneM.png")
-            .await
-            .expect("Expected a compatible texture file");
-        let tex_deepstone = load_texture("textures/DeepStoneM.png")
-            .await
-            .expect("Expected a compatible texture file");
-        let tex_grass = load_texture("textures/sandM.png")
-            .await
-            .expect("Expected a compatible texture file");
-        let tex_water = load_texture("textures/WaterM.png")
-            .await
-            .expect("Expected a compatible texture file");
-        let tex_air = load_texture("textures/sandM.png")
-            .await
-            .expect("Expected a compatible texture file");
-        let tex_sand = load_texture("textures/SandM.png")
-            .await
-            .expect("Expected a compatible texture file");
-        let tex_dirt = load_texture("textures/DirtM.png")
-            .await
-            .expect("Expected a compatible texture file");
-
         println!("Loading shaders");
         let vertex_shader = read_to_string("src/vertex.glsl").expect("expected vertex glsl shader");
         let fragment_shader =
@@ -80,29 +45,10 @@ impl App {
                 fragment: &fragment_shader,
             },
             MaterialParams {
-                textures: vec![
-                    "Tex_Lava".into(),
-                    "Tex_Stone".into(),
-                    "Tex_DeepStone".into(),
-                    "Tex_Grass".into(),
-                    "Tex_Water".into(),
-                    "Tex_Air".into(),
-                    "Tex_Sand".into(),
-                    "Tex_Dirt".into(),
-                ],
                 ..Default::default()
             },
         )
         .expect("expected a proper GLSL ShaderSource");
-        shader.set_texture("Tex_Sand", tex_sand.clone());
-        shader.set_texture("Tex_Lava", tex_lava.clone());
-        shader.set_texture("Tex_Stone", tex_stone.clone());
-        shader.set_texture("Tex_DeepStone", tex_deepstone.clone());
-        shader.set_texture("Tex_Grass", tex_grass.clone());
-        shader.set_texture("Tex_Water", tex_water.clone());
-        shader.set_texture("Tex_Air", tex_air.clone());
-        shader.set_texture("Tex_Dirt", tex_dirt.clone());
-
         // Create the texture to which we will draw
         let render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
         // Set filter mode to nearest to prevent blurry pixels
@@ -136,15 +82,6 @@ impl App {
             vertex_shader,
             fragment_shader,
             shader,
-
-            tex_lava,
-            tex_stone,
-            tex_deepstone,
-            tex_grass,
-            tex_water,
-            tex_air,
-            tex_sand,
-            tex_dirt,
 
             render_camera,
             default_camera,

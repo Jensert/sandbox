@@ -15,48 +15,101 @@ impl MapGenerator {
         let layer_rules = vec![];
         Self { layer_rules }
     }
-    pub fn default() -> Self {
-        let lava_layer = MapLayerRule::from_default_layer_type(LayerType::LavaLayer);
-        let deep_layer = MapLayerRule::from_default_layer_type(LayerType::DeepLayer);
-        let stone_layer = MapLayerRule::from_default_layer_type(LayerType::StoneLayer);
-        let dirt_layer = MapLayerRule::from_default_layer_type(LayerType::DirtLayer);
-        let grass_layer = MapLayerRule::from_default_layer_type(LayerType::GrassLayer);
 
+    pub fn default() -> Self {
         let mut map_generator = Self::empty();
 
-        map_generator
-            .push_layer(lava_layer)
-            .push_layer(deep_layer)
-            .push_layer(stone_layer)
-            .push_layer(dirt_layer)
-            .push_layer(grass_layer);
+        map_generator.push_layer(MapLayerRule::new(
+            140,
+            180,
+            0, // lowest -> first
+            PixelType::Lava,
+            ProbabilityProfile::Constant(1.0),
+        ));
+
+        map_generator.push_layer(MapLayerRule::new(
+            100,
+            143,
+            10, // above lava
+            PixelType::HardStone,
+            ProbabilityProfile::Custom(Box::new(|y, _, end| {
+                if y < 140 {
+                    1.0
+                } else {
+                    ProbabilityProfile::Linear {
+                        start: 1.0,
+                        end: 0.0,
+                    }
+                    .get(y, 140, end)
+                }
+            })),
+        ));
+
+        map_generator.push_layer(MapLayerRule::new(
+            140,
+            150,
+            20,             // <---- your new AIR layer can go here
+            PixelType::Air, // or PixelType::Empty
+            ProbabilityProfile::Constant(1.0),
+        ));
+
+        map_generator.push_layer(MapLayerRule::new(
+            50,
+            106,
+            30,
+            PixelType::Stone,
+            ProbabilityProfile::Custom(Box::new(|y, _, end| {
+                if y < 50 {
+                    1.0
+                } else {
+                    ProbabilityProfile::Linear {
+                        start: 1.0,
+                        end: 0.0,
+                    }
+                    .get(y, 100, end)
+                }
+            })),
+        ));
+
+        map_generator.push_layer(MapLayerRule::new(
+            45,
+            60,
+            40,
+            PixelType::Dirt,
+            ProbabilityProfile::Custom(Box::new(|y, _, end| {
+                if y < 50 {
+                    1.0
+                } else {
+                    ProbabilityProfile::Linear {
+                        start: 1.0,
+                        end: 0.0,
+                    }
+                    .get(y, 50, end)
+                }
+            })),
+        ));
+
+        map_generator.push_layer(MapLayerRule::new(
+            45,
+            48,
+            50,
+            PixelType::Grass,
+            ProbabilityProfile::Linear {
+                start: 1.0,
+                end: 0.0,
+            },
+        ));
 
         map_generator
     }
-
     /// Push a new layer into the map generator struct
     /// There is some safety built into this to make sure
     /// that the layers are pushed in correct order
     /// They must be pushed from lowest layer to top layer
     /// LavaLayer > DeepLayer > StoneLayer > DirtLayer > GrassLayer
     pub fn push_layer(&mut self, layer_rule: MapLayerRule) -> &mut Self {
-        let top_layer = self.layer_rules.last();
-        match top_layer {
-            None => {
-                if layer_rule.layer_type == LayerType::LavaLayer {
-                    self.layer_rules.push(layer_rule);
-                } else {
-                    panic!("Map generator layers out of order");
-                }
-            }
-            Some(top_layer) => {
-                if layer_rule.layer_type <= top_layer.layer_type {
-                    panic!("Map generator layers out of order");
-                } else {
-                    self.layer_rules.push(layer_rule);
-                }
-            }
-        }
+        self.layer_rules.push(layer_rule);
+        self.layer_rules.sort_by_key(|rule| rule.order());
 
         self
     }
@@ -71,89 +124,26 @@ impl MapGenerator {
 pub struct MapLayerRule {
     y_start: i32,
     y_end: i32,
+    order: i32,
     pixel_type: PixelType,
-    layer_type: LayerType,
     probability: ProbabilityProfile,
 }
 impl MapLayerRule {
-    pub fn from_default_layer_type(layer_type: LayerType) -> Self {
-        match layer_type {
-            LayerType::GrassLayer => {
-                let y_start = 45;
-                let y_end = 48;
-                let pixel_type = PixelType::Grass;
-                return Self {
-                    y_start,
-                    y_end,
-                    pixel_type,
-                    layer_type,
-                    probability: ProbabilityProfile::Linear {
-                        start: 1.0,
-                        end: 0.0,
-                    },
-                };
-            }
-            LayerType::DirtLayer => {
-                let y_start = 45;
-                let y_end = 60;
-                let pixel_type = PixelType::Dirt;
-                return Self {
-                    y_start,
-                    y_end,
-                    pixel_type,
-                    layer_type,
-                    probability: ProbabilityProfile::Custom(Box::new(|y, _, y_end| {
-                        if y < 50 {
-                            1.0
-                        } else {
-                            ProbabilityProfile::Linear {
-                                start: 1.0,
-                                end: 0.0,
-                            }
-                            .get(y, 50, y_end)
-                        }
-                    })),
-                };
-            }
-            LayerType::StoneLayer => {
-                let y_start = 45;
-                let y_end = 100;
-                let pixel_type = PixelType::Stone;
-                return Self {
-                    y_start,
-                    y_end,
-                    pixel_type,
-                    layer_type,
-                    probability: ProbabilityProfile::Constant(1.0),
-                };
-            }
-            LayerType::DeepLayer => {
-                let y_start = 100;
-                let y_end = 140;
-                let pixel_type = PixelType::HardStone;
-                return Self {
-                    y_start,
-                    y_end,
-                    pixel_type,
-                    layer_type,
-                    probability: ProbabilityProfile::Constant(1.0),
-                };
-            }
-            LayerType::LavaLayer => {
-                let y_start = 140;
-                let y_end = 180;
-                let pixel_type = PixelType::Lava;
-                return Self {
-                    y_start,
-                    y_end,
-                    pixel_type,
-                    layer_type,
-                    probability: ProbabilityProfile::Constant(1.0),
-                };
-            }
+    pub fn new(
+        y_start: i32,
+        y_end: i32,
+        order: i32,
+        pixel_type: PixelType,
+        probability: ProbabilityProfile,
+    ) -> Self {
+        Self {
+            y_start,
+            y_end,
+            order,
+            pixel_type,
+            probability,
         }
     }
-
     pub fn generate_layer(&self, chunk_grid: &mut ChunkGrid, rng: &RandGenerator) {
         for y in self.y_start..self.y_end {
             // calculate probability here
@@ -174,6 +164,10 @@ impl MapLayerRule {
                 }
             }
         }
+    }
+
+    pub fn order(&self) -> i32 {
+        self.order
     }
 }
 
@@ -199,13 +193,4 @@ impl ProbabilityProfile {
             ProbabilityProfile::Custom(f) => (f)(y, y_start, y_end),
         }
     }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-pub enum LayerType {
-    LavaLayer,
-    DeepLayer,
-    StoneLayer,
-    DirtLayer,
-    GrassLayer,
 }
