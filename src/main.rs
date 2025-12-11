@@ -8,7 +8,7 @@ mod pixel;
 mod pixelgrid;
 mod pixeltype;
 mod ui;
-use app::App;
+use app::{App, AppTimer};
 
 pub fn window_settings() -> Conf {
     Conf {
@@ -21,6 +21,7 @@ pub fn window_settings() -> Conf {
 
 const CHUNK_SIZE: (usize, usize) = (160, 90);
 const RENDER_SIZE: (u32, u32) = (320, 180);
+const FIXED_TIMESTEP: f32 = 1.0 / 60.0;
 
 #[main(window_settings)]
 async fn main() {
@@ -40,6 +41,7 @@ async fn main() {
     seed = seed % 12345678;
     rng.srand(seed);
     let mut app = App::new((width_ratio, height_ratio), &rng).await;
+    let mut app_timer = AppTimer::new();
     println!("Started app with seed: {seed}");
     // Create pixelgrid with the seed
     while app.running() {
@@ -48,7 +50,7 @@ async fn main() {
         app.handle_input(&rng);
 
         // Update all states and logic
-        app.update(&rng);
+        app_timer.tick(|| app.update(&rng));
 
         // Start draw call. Everything drawn here is drawn to the render target
         app.start_drawing();

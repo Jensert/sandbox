@@ -1,10 +1,10 @@
-use std::{collections::HashMap, fs::read_to_string};
+use std::fs::read_to_string;
 
 use macroquad::{prelude::*, rand::RandGenerator};
 
 use crate::{
-    RENDER_SIZE, brush::Brush, mapgenerator::MapGenerator, pixelgrid::ChunkGrid,
-    pixeltype::PixelType, ui::UserInterface,
+    FIXED_TIMESTEP, RENDER_SIZE, brush::Brush, mapgenerator::MapGenerator, pixelgrid::ChunkGrid,
+    ui::UserInterface,
 };
 
 pub struct App {
@@ -23,6 +23,7 @@ pub struct App {
     should_quit: bool,
     total_scroll: f32,
 
+    app_timer: AppTimer,
     chunk_grid: ChunkGrid,
     map_generator: MapGenerator,
     brush: Brush,
@@ -91,6 +92,7 @@ impl App {
             should_quit: false,
             total_scroll: 0.0,
 
+            app_timer: AppTimer::new(),
             chunk_grid,
             map_generator,
             brush: Brush::new(),
@@ -118,6 +120,10 @@ impl App {
 
     pub fn user_interface_mut(&mut self) -> &mut UserInterface {
         &mut self.user_interface
+    }
+
+    pub fn app_timer(&self) -> AppTimer {
+        self.app_timer
     }
 
     pub fn compile_shader(&mut self, vertex_shader: String, fragment_shader: String) {
@@ -287,5 +293,24 @@ impl App {
 
     pub fn chunks_mut(&mut self) -> &mut ChunkGrid {
         return &mut self.chunk_grid;
+    }
+}
+#[derive(Copy, Clone)]
+pub struct AppTimer {
+    accumulator: f32,
+}
+
+impl AppTimer {
+    pub fn new() -> Self {
+        Self { accumulator: 0.0 }
+    }
+
+    pub fn tick<F: FnMut()>(&mut self, mut physics_step: F) {
+        self.accumulator += get_frame_time();
+
+        while self.accumulator >= FIXED_TIMESTEP {
+            physics_step();
+            self.accumulator -= FIXED_TIMESTEP;
+        }
     }
 }

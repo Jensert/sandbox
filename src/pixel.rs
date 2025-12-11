@@ -1,5 +1,5 @@
 use crate::pixelgrid::{Chunk, GridMovement};
-use crate::pixeltype::PixelType;
+use crate::pixeltype::{AIR, PixelType};
 use macroquad::{prelude::*, rand::RandGenerator};
 
 #[derive(Clone, Copy)]
@@ -7,26 +7,25 @@ pub struct Pixel {
     pixel_type: PixelType,
     color: Color,
     temperature: i32,
+    movement_speed: f32,
 }
 impl Pixel {
     pub fn empty() -> Self {
         Pixel {
             pixel_type: PixelType::Air,
-            color: Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.0,
-            },
+            color: AIR,
             temperature: 1,
+            movement_speed: PixelType::Air.movement_speed(),
         }
     }
     pub fn from_pixel_type(pixel_type: PixelType, rng: &RandGenerator) -> Self {
         let color = pixel_type.to_color_shade(rng);
+        let movement_speed = pixel_type.movement_speed();
         Self {
             pixel_type,
             color,
             temperature: 1,
+            movement_speed,
         }
     }
 
@@ -64,6 +63,10 @@ pub fn update_sand(
     let new_position = old_position;
     let pixel_type = PixelType::Sand;
 
+    if rng.gen_range(0.0, 1.0) > pixel_type.movement_speed() {
+        return None;
+    }
+
     let mut grid_movement = GridMovement::new(old_position, new_position);
 
     if pixel_type.apply_gravity(pixel_grid, &mut grid_movement) {
@@ -86,6 +89,10 @@ pub fn update_water(
     let old_position = (x, y);
     let new_position = old_position;
     let pixel_type = PixelType::Water;
+
+    if rng.gen_range(0.0, 1.0) > pixel_type.movement_speed() {
+        return None;
+    }
 
     let mut grid_movement = GridMovement::new(old_position, new_position);
 
@@ -114,6 +121,10 @@ pub fn update_lava(
     let old_position = (x, y);
     let new_position = old_position;
     let pixel_type = PixelType::Lava;
+
+    if rng.gen_range(0.0, 1.0) > pixel_type.movement_speed() {
+        return None;
+    }
 
     let mut grid_movement = GridMovement::new(old_position, new_position);
 
