@@ -44,6 +44,9 @@ impl Pixel {
             PixelType::Sand => update_sand(pixel_grid, x, y, rng),
             PixelType::Water => update_water(pixel_grid, x, y, rng),
             PixelType::Lava => update_lava(pixel_grid, x, y, rng),
+            PixelType::Stone => update_stone(pixel_grid, x, y, rng),
+            PixelType::Dirt => update_dirt(pixel_grid, x, y, rng),
+            PixelType::Grass => update_grass(pixel_grid, x, y, rng),
             _ => None,
         }
     }
@@ -62,6 +65,87 @@ pub fn update_sand(
     let old_position = (x, y);
     let new_position = old_position;
     let pixel_type = PixelType::Sand;
+
+    if rng.gen_range(0.0, 1.0) > pixel_type.movement_speed() {
+        return None;
+    }
+
+    let mut grid_movement = GridMovement::new(old_position, new_position);
+
+    if pixel_type.apply_gravity(pixel_grid, &mut grid_movement) {
+        return Some(grid_movement);
+    }
+
+    let direction = rng.gen_range(0, 2);
+    if pixel_type.fall(pixel_grid, &mut grid_movement, direction) {
+        return Some(grid_movement);
+    }
+    return None;
+}
+
+pub fn update_stone(
+    pixel_grid: &Chunk,
+    x: i32,
+    y: i32,
+    rng: &RandGenerator,
+) -> Option<GridMovement> {
+    let old_position = (x, y);
+    let new_position = old_position;
+    let pixel_type = PixelType::Stone;
+
+    if rng.gen_range(0.0, 1.0) > pixel_type.movement_speed() {
+        return None;
+    }
+
+    let mut grid_movement = GridMovement::new(old_position, new_position);
+
+    if pixel_type.apply_gravity(pixel_grid, &mut grid_movement) {
+        return Some(grid_movement);
+    }
+
+    let direction = rng.gen_range(0, 2);
+    if pixel_type.fall(pixel_grid, &mut grid_movement, direction) {
+        return Some(grid_movement);
+    }
+    return None;
+}
+
+pub fn update_dirt(
+    pixel_grid: &Chunk,
+    x: i32,
+    y: i32,
+    rng: &RandGenerator,
+) -> Option<GridMovement> {
+    let old_position = (x, y);
+    let new_position = old_position;
+    let pixel_type = PixelType::Dirt;
+
+    if rng.gen_range(0.0, 1.0) > pixel_type.movement_speed() {
+        return None;
+    }
+
+    let mut grid_movement = GridMovement::new(old_position, new_position);
+
+    if pixel_type.apply_gravity(pixel_grid, &mut grid_movement) {
+        return Some(grid_movement);
+    }
+
+    let direction = rng.gen_range(0, 2);
+    if pixel_type.fall(pixel_grid, &mut grid_movement, direction) {
+        return Some(grid_movement);
+    }
+    return None;
+}
+
+pub fn update_grass(
+    pixel_grid: &Chunk,
+    x: i32,
+    y: i32,
+    rng: &RandGenerator,
+) -> Option<GridMovement> {
+    let old_position = (x, y);
+    let new_position = old_position;
+    let pixel_type = PixelType::Grass;
 
     if rng.gen_range(0.0, 1.0) > pixel_type.movement_speed() {
         return None;

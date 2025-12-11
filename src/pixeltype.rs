@@ -98,10 +98,10 @@ impl PixelType {
             PixelType::Sand => 1.0, //Color::new(rng.gen_range(0.7, 0.9), 0.69, 0.51, 1.00), // Beige
             PixelType::Water => 1.0, //Color::new(0.00, 0.47, rng.gen_range(0.89, 0.99), 1.00), // Blue
             PixelType::Lava => 0.25, //Color::new(rng.gen_range(0.65, 0.75), 0.25, 0.05, 1.00), // Red
-            PixelType::Dirt => 0.0, //Color::new(rng.gen_range(0.25, 0.35), 0.25, 0.18, 1.00), // Darkbrown
-            PixelType::Stone => 0.0, //Color::new(0.5, 0.5, rng.gen_range(0.48, 0.53), 1.00), // Gray
+            PixelType::Dirt => 0.5, //Color::new(rng.gen_range(0.25, 0.35), 0.25, 0.18, 1.00), // Darkbrown
+            PixelType::Stone => 0.1, //Color::new(0.5, 0.5, rng.gen_range(0.48, 0.53), 1.00), // Gray
             PixelType::HardStone => 0.0, //Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Dark Gray
-            PixelType::Grass => 0.0, //Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
+            PixelType::Grass => 0.3, //Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
             PixelType::Air => 0.0,
         }
     }

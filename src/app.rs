@@ -4,7 +4,7 @@ use macroquad::{prelude::*, rand::RandGenerator};
 
 use crate::{
     FIXED_TIMESTEP, RENDER_SIZE, brush::Brush, mapgenerator::MapGenerator, pixelgrid::ChunkGrid,
-    ui::UserInterface,
+    player::Minion, ui::UserInterface,
 };
 
 pub struct App {
@@ -28,6 +28,7 @@ pub struct App {
     map_generator: MapGenerator,
     brush: Brush,
     user_interface: UserInterface,
+    minion: Minion,
 }
 impl App {
     pub async fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
@@ -97,6 +98,7 @@ impl App {
             map_generator,
             brush: Brush::new(),
             user_interface: UserInterface::new(),
+            minion: Minion::new().await,
         }
     }
 
@@ -122,8 +124,8 @@ impl App {
         &mut self.user_interface
     }
 
-    pub fn app_timer(&self) -> AppTimer {
-        self.app_timer
+    pub fn player(&self) -> &Minion {
+        &self.minion
     }
 
     pub fn compile_shader(&mut self, vertex_shader: String, fragment_shader: String) {
@@ -280,6 +282,7 @@ impl App {
 
     pub fn update(&mut self, rng: &RandGenerator) {
         self.chunks_mut().update(rng);
+        self.minion.move_player();
         let frag = self.user_interface().data().fragment_shader;
         let vert = self.user_interface().data().vertex_shader;
         if self.fragment_shader != frag || self.vertex_shader != vert {
