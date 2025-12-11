@@ -12,12 +12,14 @@ pub struct UserInterface {
     shader_enabled: bool,
     vertex_shader: String,
     fragment_shader: String,
+    zoom: f32,
 }
 pub struct UserInterfaceData {
     pub debug_enabled: bool,
     pub shader_enabled: bool,
     pub vertex_shader: String,
     pub fragment_shader: String,
+    pub zoom: f32,
 }
 
 impl UserInterface {
@@ -29,6 +31,7 @@ impl UserInterface {
                 .expect("expected a vertex glsl shader"),
             fragment_shader: read_to_string("src/fragment.glsl")
                 .expect("expected a fragment glsl shader"),
+            zoom: 1.0,
         }
     }
 
@@ -54,7 +57,15 @@ impl UserInterface {
             shader_enabled: self.shader_enabled,
             vertex_shader: self.vertex_shader.clone(),
             fragment_shader: self.fragment_shader.clone(),
+            zoom: self.zoom.clone(),
         }
+    }
+
+    pub fn zoom_increase(&mut self) {
+        self.zoom += 0.1;
+    }
+    pub fn zoom_decrease(&mut self) {
+        self.zoom -= 0.1;
     }
 
     /// Wrapper function for all UserInterface drawing logic

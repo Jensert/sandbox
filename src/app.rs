@@ -47,6 +47,10 @@ impl App {
                 fragment: &fragment_shader,
             },
             MaterialParams {
+                uniforms: vec![
+                    UniformDesc::new("zoom", UniformType::Float1),
+                    UniformDesc::new("mousePosition", UniformType::Float2),
+                ],
                 ..Default::default()
             },
         )
@@ -201,6 +205,10 @@ impl App {
                         self.brush_mut().increase_size(1.0);
                         continue;
                     }
+                    if is_key_down(KeyCode::LeftControl) {
+                        self.user_interface_mut().zoom_increase();
+                        continue;
+                    }
                     self.brush_mut().pixel_type_mut().next();
                 }
                 self.total_scroll = 0.0;
@@ -219,6 +227,10 @@ impl App {
 
                     if is_key_down(KeyCode::LeftAlt) {
                         self.brush_mut().decrease_size(1.0);
+                        continue;
+                    }
+                    if is_key_down(KeyCode::LeftControl) {
+                        self.user_interface_mut().zoom_decrease();
                         continue;
                     }
                     self.brush_mut().pixel_type_mut().previous();
@@ -271,6 +283,10 @@ impl App {
                 ..Default::default()
             },
         );
+
+        self.shader
+            .set_uniform("zoom", self.user_interface().data().zoom);
+        self.shader.set_uniform("mousePosition", mouse_position());
 
         if self.user_interface().data().shader_enabled {
             // Apply shader
