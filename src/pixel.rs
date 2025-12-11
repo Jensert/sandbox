@@ -44,6 +44,7 @@ impl Pixel {
         match self.pixel_type {
             PixelType::Sand => update_sand(pixel_grid, x, y, rng),
             PixelType::Water => update_water(pixel_grid, x, y, rng),
+            PixelType::Lava => update_lava(pixel_grid, x, y, rng),
             _ => None,
         }
     }
@@ -85,6 +86,34 @@ pub fn update_water(
     let old_position = (x, y);
     let new_position = old_position;
     let pixel_type = PixelType::Water;
+
+    let mut grid_movement = GridMovement::new(old_position, new_position);
+
+    if pixel_type.apply_gravity(pixel_grid, &mut grid_movement) {
+        return Some(grid_movement);
+    }
+
+    let direction = rng.gen_range(0, 2);
+    if pixel_type.fall(pixel_grid, &mut grid_movement, direction) {
+        return Some(grid_movement);
+    }
+
+    if pixel_type.settle(pixel_grid, &mut grid_movement, direction) {
+        return Some(grid_movement);
+    }
+
+    return None;
+}
+
+pub fn update_lava(
+    pixel_grid: &Chunk,
+    x: i32,
+    y: i32,
+    rng: &RandGenerator,
+) -> Option<GridMovement> {
+    let old_position = (x, y);
+    let new_position = old_position;
+    let pixel_type = PixelType::Lava;
 
     let mut grid_movement = GridMovement::new(old_position, new_position);
 
