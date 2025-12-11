@@ -1,6 +1,6 @@
 use macroquad::{color::Color, rand::RandGenerator};
 
-const LAVA: Color = Color::new(0.90, 0.16, 0.22, 1.00);
+const LAVA: Color = Color::new(0.70, 0.16, 0.22, 1.00);
 const STONE: Color = Color::new(0.51, 0.51, 0.51, 1.00);
 const DEEPSTONE: Color = Color::new(0.31, 0.31, 0.31, 1.00);
 const GRASS: Color = Color::new(0.00, 0.46, 0.17, 1.00);

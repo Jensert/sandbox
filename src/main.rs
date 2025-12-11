@@ -39,7 +39,7 @@ async fn main() {
         .expect("Time went too fast");
     seed = seed % 12345678;
     rng.srand(seed);
-    let mut app = App::new((width_ratio, height_ratio), &rng);
+    let mut app = App::new((width_ratio, height_ratio), &rng).await;
     println!("Started app with seed: {seed}");
     // Create pixelgrid with the seed
     while app.running() {

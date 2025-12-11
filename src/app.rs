@@ -1,9 +1,10 @@
-use std::fs::{read, read_to_string};
+use std::{collections::HashMap, fs::read_to_string};
 
-use macroquad::{miniquad::window::screen_size, prelude::*, rand::RandGenerator};
+use macroquad::{prelude::*, rand::RandGenerator};
 
 use crate::{
-    RENDER_SIZE, brush::Brush, mapgenerator::MapGenerator, pixelgrid::ChunkGrid, ui::UserInterface,
+    RENDER_SIZE, brush::Brush, mapgenerator::MapGenerator, pixelgrid::ChunkGrid,
+    pixeltype::PixelType, ui::UserInterface,
 };
 
 pub struct App {
@@ -15,11 +16,19 @@ pub struct App {
     fragment_shader: String,
     shader: Material,
 
+    tex_lava: Texture2D,
+    tex_stone: Texture2D,
+    tex_deepstone: Texture2D,
+    tex_grass: Texture2D,
+    tex_water: Texture2D,
+    tex_air: Texture2D,
+    tex_sand: Texture2D,
+    tex_dirt: Texture2D,
+
     render_camera: Camera2D,
     default_camera: Camera2D,
 
     mouse_world_position: Vec2,
-
     should_quit: bool,
     total_scroll: f32,
 
@@ -29,29 +38,75 @@ pub struct App {
     user_interface: UserInterface,
 }
 impl App {
-    pub fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
+    pub async fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
         let mut chunk_grid = ChunkGrid::new(rng);
         let map_generator = MapGenerator::default();
         map_generator.generate_map(&mut chunk_grid, rng);
 
-        // Create the texture to which we will draw
-        let render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
-        // Set filter mode to nearest to prevent blurry pixels
-        render_target.texture.set_filter(FilterMode::Nearest);
+        println!("Loading textures");
+        let tex_lava = load_texture("textures/Lava.png")
+            .await
+            .expect("Expected a compatible texture file");
+        let tex_stone = load_texture("textures/StoneM.png")
+            .await
+            .expect("Expected a compatible texture file");
+        let tex_deepstone = load_texture("textures/DeepStoneM.png")
+            .await
+            .expect("Expected a compatible texture file");
+        let tex_grass = load_texture("textures/sandM.png")
+            .await
+            .expect("Expected a compatible texture file");
+        let tex_water = load_texture("textures/WaterM.png")
+            .await
+            .expect("Expected a compatible texture file");
+        let tex_air = load_texture("textures/sandM.png")
+            .await
+            .expect("Expected a compatible texture file");
+        let tex_sand = load_texture("textures/SandM.png")
+            .await
+            .expect("Expected a compatible texture file");
+        let tex_dirt = load_texture("textures/DirtM.png")
+            .await
+            .expect("Expected a compatible texture file");
 
+        println!("Loading shaders");
         let vertex_shader = read_to_string("src/vertex.glsl").expect("expected vertex glsl shader");
         let fragment_shader =
             read_to_string("src/fragment.glsl").expect("expected fragment glsl shader");
+
         let shader = load_material(
             ShaderSource::Glsl {
                 vertex: &vertex_shader,
                 fragment: &fragment_shader,
             },
             MaterialParams {
+                textures: vec![
+                    "Tex_Lava".into(),
+                    "Tex_Stone".into(),
+                    "Tex_DeepStone".into(),
+                    "Tex_Grass".into(),
+                    "Tex_Water".into(),
+                    "Tex_Air".into(),
+                    "Tex_Sand".into(),
+                    "Tex_Dirt".into(),
+                ],
                 ..Default::default()
             },
         )
         .expect("expected a proper GLSL ShaderSource");
+        shader.set_texture("Tex_Sand", tex_sand.clone());
+        shader.set_texture("Tex_Lava", tex_lava.clone());
+        shader.set_texture("Tex_Stone", tex_stone.clone());
+        shader.set_texture("Tex_DeepStone", tex_deepstone.clone());
+        shader.set_texture("Tex_Grass", tex_grass.clone());
+        shader.set_texture("Tex_Water", tex_water.clone());
+        shader.set_texture("Tex_Air", tex_air.clone());
+        shader.set_texture("Tex_Dirt", tex_dirt.clone());
+
+        // Create the texture to which we will draw
+        let render_target = render_target(RENDER_SIZE.0, RENDER_SIZE.1);
+        // Set filter mode to nearest to prevent blurry pixels
+        render_target.texture.set_filter(FilterMode::Nearest);
 
         // Create the camera which we use to render. The render target is attached to this camera
         let mut render_camera = Camera2D::from_display_rect(Rect {
@@ -81,6 +136,15 @@ impl App {
             vertex_shader,
             fragment_shader,
             shader,
+
+            tex_lava,
+            tex_stone,
+            tex_deepstone,
+            tex_grass,
+            tex_water,
+            tex_air,
+            tex_sand,
+            tex_dirt,
 
             render_camera,
             default_camera,
@@ -262,17 +326,7 @@ impl App {
         if self.user_interface().data().shader_enabled {
             // Apply shader
             gl_use_material(&self.shader);
-            draw_texture_ex(
-                &self.render_target.texture,
-                0.0,
-                0.0,
-                WHITE,
-                DrawTextureParams {
-                    dest_size: Some(texture_vec),
-                    flip_y: true, // Fip y is necessary because macroquad cameras with render targets flip their Y coordinates
-                    ..Default::default()
-                },
-            );
+            draw_rectangle(0.0, texture_vec.y, texture_vec.x, -texture_vec.y, WHITE);
             gl_use_default_material();
         }
     }

@@ -10,8 +10,8 @@
     Loop over the layer_rules, and call generate() function on all of them
 [x] finish push_layer() function in MapGenerator struct
 [x] finish all default layer implementations in MapLayerRule.from_default_layer() function
+[] Finish shader texture implementation
 [] Add post processing
-[] shader_texture logic and stop_drawing logic in Chunk and App
 [] Add gameplay
 [x] Move UI logic and drawing to a seperate struct. This struct should be owned by App.
 [] Add way to skip pixels that do not require updating
