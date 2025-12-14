@@ -9,7 +9,7 @@ uniform vec2 MousePosition; // mouse position in pixels
 uniform float Zoom;        // zoom factor > 1.0 = zoom in
 
 // Screen resolution
-vec2 screenSize = vec2(360.0, 180.0);
+vec2 screenSize = vec2(320.0, 180.0);
 
 void main() {
     // Compute mouse position in UV space (0–1)
