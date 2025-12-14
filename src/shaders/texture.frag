@@ -21,7 +21,7 @@ float hash(vec2 p) {
 }
 
 // Screen resolution
-vec2 screenSize = vec2(320.0, 180.0);
+vec2 screenSize = vec2(320.0, 180.0) * 1.5;
 
 // --------------------- Materials ---------------------
 
