@@ -282,8 +282,8 @@ impl Chunk {
         let mut changes: Vec<GridMovement> = vec![];
         for y in 0..CHUNK_SIZE.1 {
             for x in 0..CHUNK_SIZE.0 {
-                if let Some(pixel_type) = self.get(x as i32, y as i32) {
-                    if let Some(movement) = pixel_type.update(self, x as i32, y as i32, rng) {
+                if let Some(pixel) = self.get(x as i32, y as i32) {
+                    if let Some(movement) = pixel.update_new(self, x as i32, y as i32, rng) {
                         changes.push(movement);
                     }
                 }
