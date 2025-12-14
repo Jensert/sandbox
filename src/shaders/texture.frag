@@ -1,26 +1,10 @@
+
 #version 100
 precision mediump float;
 
-// ------------------------Vertex shader uniforms--------------------------//
-varying vec2 uv; // normalized texture coordinates
- 
-// ------------------------Predefined Macroquad uniforms-------------------//
+varying vec2 uv; // normalized texture coordinates. passed in from the vertex shader
 uniform float _Time;
 uniform sampler2D _ScreenTexture;
-
-// ------------------------Texture uniforms--------------------------------//
-uniform sampler2D Tex_Stone;
-uniform sampler2D Tex_Lava;
-uniform sampler2D Tex_DeepStone;
-uniform sampler2D Tex_Grass;
-uniform sampler2D Tex_Water;
-uniform sampler2D Tex_Air;
-uniform sampler2D Tex_Sand;
-uniform sampler2D Tex_Dirt;
-
-// ------------------------Custom user uniforms----------------------------//
-uniform vec2 mousePosition;        // mouse position in pixels
-uniform float zoom;                // zoom factor > 1.0 = zoom in
 
 vec4 LAVA = vec4(0.70, 0.16, 0.22, 1.00);
 vec4 STONE = vec4(0.51, 0.51, 0.51, 1.00);
@@ -30,8 +14,6 @@ vec4 WATER = vec4(0.00, 0.47, 0.95, 1.00);
 vec4 AIR = vec4(0.40, 0.75, 1.00, 1.00);
 vec4 SAND = vec4(0.83, 0.69, 0.51, 1.00);
 vec4 DIRT = vec4(0.30, 0.25, 0.18, 1.00);
-
-
 
 // Simple hash function for per-pixel randomness
 float hash(vec2 p) {
@@ -61,7 +43,7 @@ vec4 drawDeepStone(vec2 uv) {
 
 vec4 drawLava(vec2 uv) {
     vec2 pixelUV = floor(uv * screenSize);
-    float rnd = hash(pixelUV + 68.0);
+    float rnd = hash(pixelUV + 20.0);
     vec3 base = vec3(0.70, 0.16, 0.22);
     float variation = (rnd - 0.5) * 0.12;
     return vec4(base + variation, 1.0);
@@ -69,7 +51,7 @@ vec4 drawLava(vec2 uv) {
 
 vec4 drawGrass(vec2 uv) {
     vec2 pixelUV = floor(uv * screenSize);
-    float rnd = hash(pixelUV + 29.0);
+    float rnd = hash(pixelUV + 30.0);
     vec3 base = vec3(0.00, 0.46, 0.17);
     float variation = (rnd - 0.5) * 0.08;
     return vec4(base + variation, 1.0);
@@ -77,7 +59,7 @@ vec4 drawGrass(vec2 uv) {
 
 vec4 drawWater(vec2 uv) {
     vec2 pixelUV = floor(uv * screenSize);
-    float rnd = hash(pixelUV + 99.0);
+    float rnd = hash(pixelUV + 40.0);
     vec3 base = vec3(0.00, 0.47, 0.95);
     float variation = (rnd - 0.5) * 0.08;
     return vec4(base + variation, 1.0);
@@ -101,13 +83,12 @@ vec4 drawSand(vec2 uv) {
 
 vec4 drawDirt(vec2 uv) {
     vec2 pixelUV = floor(uv * screenSize);
-    float rnd = hash(pixelUV + 107.0);
+    float rnd = hash(pixelUV + 70.0);
     vec3 base = vec3(0.30, 0.25, 0.18);
     float variation = (rnd - 0.5) * 0.06;
     return vec4(base + variation, 1.0);
 }
-
-vec4 sampleColor(vec2 uv, vec4 color) {
+vec4 sampleTexture(vec2 uv, vec4 color) {
     float tolerance = 0.05;
 
     if (distance(color, STONE) < tolerance)      return drawStone(uv);
@@ -122,20 +103,7 @@ vec4 sampleColor(vec2 uv, vec4 color) {
     return vec4(0.0);
 }
 
-
 void main() {
-    vec2 uv01 = uv;
-
-    vec2 pixelUV = uv01 * screenSize;
-
-    vec2 mouseUV = mousePosition / screenSize;
-    vec2 zoomed01 = (uv01 - mouseUV) / zoom + mouseUV;
-
-    vec4 screenColor = texture2D(_ScreenTexture, zoomed01);
-
-    vec2 zoomedPixelUV = zoomed01 * screenSize;
-
-    vec4 outputColor = sampleColor(zoomedPixelUV, screenColor);
-
-    gl_FragColor = outputColor;
+    vec4 screenColor = texture2D(_ScreenTexture, uv);
+    gl_FragColor = sampleTexture(uv, screenColor);
 }

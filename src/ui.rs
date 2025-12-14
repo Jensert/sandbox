@@ -12,6 +12,7 @@ pub struct UserInterface {
     shader_enabled: bool,
     vertex_shader: String,
     fragment_shader: String,
+    zoom_enabled: bool,
     zoom: f32,
 }
 pub struct UserInterfaceData {
@@ -19,6 +20,7 @@ pub struct UserInterfaceData {
     pub shader_enabled: bool,
     pub vertex_shader: String,
     pub fragment_shader: String,
+    pub zoom_enabled: bool,
     pub zoom: f32,
 }
 
@@ -27,11 +29,12 @@ impl UserInterface {
         Self {
             debug_enabled: true,
             shader_enabled: false,
-            vertex_shader: read_to_string("src/vertex.glsl")
+            vertex_shader: read_to_string("src/shaders/vertex.glsl")
                 .expect("expected a vertex glsl shader"),
-            fragment_shader: read_to_string("src/fragment.glsl")
+            fragment_shader: read_to_string("src/shaders/texture.frag")
                 .expect("expected a fragment glsl shader"),
-            zoom: 1.0,
+            zoom_enabled: false,
+            zoom: 7.0,
         }
     }
 
@@ -46,9 +49,9 @@ impl UserInterface {
     pub fn read_shader_files(&mut self) {
         println!("Reloading shader files");
         self.fragment_shader =
-            read_to_string("src/fragment.glsl").expect("expected a fragment glsl shader");
+            read_to_string("src/shaders/texture.frag").expect("expected a fragment glsl shader");
         self.vertex_shader =
-            read_to_string("src/vertex.glsl").expect("expected a vertex glsl shader");
+            read_to_string("src/shaders/vertex.glsl").expect("expected a vertex glsl shader");
     }
 
     pub fn data(&self) -> UserInterfaceData {
@@ -57,10 +60,17 @@ impl UserInterface {
             shader_enabled: self.shader_enabled,
             vertex_shader: self.vertex_shader.clone(),
             fragment_shader: self.fragment_shader.clone(),
+            zoom_enabled: self.zoom_enabled,
             zoom: self.zoom.clone(),
         }
     }
 
+    pub fn enable_zoom(&mut self) {
+        self.zoom_enabled = true;
+    }
+    pub fn disable_zoom(&mut self) {
+        self.zoom_enabled = false;
+    }
     pub fn zoom_increase(&mut self) {
         self.zoom += 0.1;
     }
@@ -125,6 +135,7 @@ impl UserInterface {
                     )
                     .as_str(),
                 );
+                ui.label(None, format!("Mouse zoom: {}", self.zoom).as_str());
 
                 // ChunkGrid functions
                 ui.separator();

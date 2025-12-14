@@ -9,12 +9,15 @@ use crate::{
 
 pub struct App {
     render_ratio: (f32, f32),
-
     render_target: RenderTarget,
 
     vertex_shader: String,
-    fragment_shader: String,
-    shader: Material,
+
+    fragment_texture_shader: String,
+    texture_material: Material,
+
+    fragment_zoom_shader: String,
+    zoom_material: Material,
 
     render_camera: Camera2D,
     default_camera: Camera2D,
@@ -23,7 +26,6 @@ pub struct App {
     should_quit: bool,
     total_scroll: f32,
 
-    app_timer: AppTimer,
     chunk_grid: ChunkGrid,
     map_generator: MapGenerator,
     brush: Brush,
@@ -37,19 +39,32 @@ impl App {
         map_generator.generate_map(&mut chunk_grid, rng);
 
         println!("Loading shaders");
-        let vertex_shader = read_to_string("src/vertex.glsl").expect("expected vertex glsl shader");
-        let fragment_shader =
-            read_to_string("src/fragment.glsl").expect("expected fragment glsl shader");
+        let vertex_shader =
+            read_to_string("src/shaders/vertex.glsl").expect("expected vertex glsl shader");
+        let fragment_texture_shader =
+            read_to_string("src/shaders/texture.frag").expect("expected fragment glsl shader");
+        let fragment_zoom_shader =
+            read_to_string("src/shaders/zoom.frag").expect("expected fragment glsl shader");
 
-        let shader = load_material(
+        let texture_material = load_material(
             ShaderSource::Glsl {
                 vertex: &vertex_shader,
-                fragment: &fragment_shader,
+                fragment: &fragment_texture_shader,
+            },
+            MaterialParams {
+                ..Default::default()
+            },
+        )
+        .expect("expected a proper GLSL ShaderSource");
+        let zoom_material = load_material(
+            ShaderSource::Glsl {
+                vertex: &vertex_shader,
+                fragment: &fragment_zoom_shader,
             },
             MaterialParams {
                 uniforms: vec![
-                    UniformDesc::new("zoom", UniformType::Float1),
-                    UniformDesc::new("mousePosition", UniformType::Float2),
+                    UniformDesc::new("Zoom", UniformType::Float1),
+                    UniformDesc::new("MousePosition", UniformType::Float2),
                 ],
                 ..Default::default()
             },
@@ -86,8 +101,12 @@ impl App {
             render_target,
 
             vertex_shader,
-            fragment_shader,
-            shader,
+
+            fragment_texture_shader,
+            texture_material,
+
+            fragment_zoom_shader,
+            zoom_material,
 
             render_camera,
             default_camera,
@@ -97,7 +116,6 @@ impl App {
             should_quit: false,
             total_scroll: 0.0,
 
-            app_timer: AppTimer::new(),
             chunk_grid,
             map_generator,
             brush: Brush::new(),
@@ -146,7 +164,7 @@ impl App {
         )
         .expect("expected a proper GLSL ShaderSource");
 
-        self.shader = shader;
+        self.texture_material = shader;
     }
 
     pub fn draw_ui(&mut self, rng: &RandGenerator) {
@@ -250,6 +268,12 @@ impl App {
         if is_key_pressed(KeyCode::GraveAccent) {
             self.user_interface.toggle_debug();
         }
+        if is_key_down(KeyCode::LeftControl) {
+            self.user_interface.enable_zoom();
+        }
+        if is_key_released(KeyCode::LeftControl) {
+            self.user_interface.disable_zoom();
+        }
 
         if is_key_released(KeyCode::R) {
             self.user_interface_mut().read_shader_files();
@@ -284,15 +308,49 @@ impl App {
             },
         );
 
-        self.shader
-            .set_uniform("zoom", self.user_interface().data().zoom);
-        self.shader.set_uniform("mousePosition", mouse_position());
+        self.zoom_material
+            .set_uniform("Zoom", self.user_interface().data().zoom);
+        self.zoom_material
+            .set_uniform("MousePosition", self.mouse_world_position);
 
         if self.user_interface().data().shader_enabled {
-            // Apply shader
-            gl_use_material(&self.shader);
+            // Apply texture shader
+            gl_use_material(&self.texture_material);
             draw_rectangle(0.0, texture_vec.y, texture_vec.x, -texture_vec.y, WHITE);
             gl_use_default_material();
+
+            // Apply zoom shader
+            if self.user_interface().data().zoom_enabled {
+                // Calculate zoom texture position and size
+                let zoom_texture_size = vec2(screen_width() / 7.0, -screen_height() / 7.0);
+                let zoom_texture_position = vec2(
+                    (self.mouse_world_position.x * self.render_ratio.0)
+                        - (zoom_texture_size.x / 2.0),
+                    self.mouse_world_position.y * self.render_ratio.1,
+                );
+                // Set texture shader
+                gl_use_material(&self.zoom_material);
+                // Draw the texture
+                draw_rectangle(
+                    zoom_texture_position.x,
+                    zoom_texture_position.y,
+                    zoom_texture_size.x,
+                    zoom_texture_size.y,
+                    WHITE,
+                );
+
+                // Reset to default material shader
+                gl_use_default_material();
+                // Draw outline for the zoom shader texture
+                draw_rectangle_lines(
+                    zoom_texture_position.x,
+                    zoom_texture_position.y,
+                    zoom_texture_size.x,
+                    zoom_texture_size.y,
+                    5.0,
+                    ORANGE,
+                );
+            }
         }
     }
 
@@ -301,7 +359,7 @@ impl App {
         self.minion.move_player();
         let frag = self.user_interface().data().fragment_shader;
         let vert = self.user_interface().data().vertex_shader;
-        if self.fragment_shader != frag || self.vertex_shader != vert {
+        if self.fragment_texture_shader != frag || self.vertex_shader != vert {
             self.compile_shader(vert, frag);
         }
     }
