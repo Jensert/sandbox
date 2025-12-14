@@ -15,7 +15,6 @@ void main() {
     // Compute mouse position in UV space (0–1)
     vec2 mouseUV = MousePosition / screenSize;
     mouseUV.y = 1.0 - mouseUV.y; // Flip Y to match texture space
-    // Zoom around mouse:
     //   Move uv relative to mouse → scale → move back
     vec2 zoomedUV = (uv - mouseUV) / Zoom + mouseUV;
 
