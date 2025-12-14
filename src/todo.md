@@ -13,6 +13,7 @@
 [x] Finish shader texture implementation
 [x] Zoom
 [] Add decay mechanic to avoid always falling and chaotic worlds
+    THis should be added by changing the stability of all surrounding pixels whenever 1 pixel is added or removed
 [] Add gameplay
 [x] Move UI logic and drawing to a seperate struct. This struct should be owned by App.
 [] Add way to skip pixels that do not require updating
