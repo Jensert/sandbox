@@ -228,7 +228,6 @@ pub struct Chunk {
     last_updates: HashMap<(i32, i32), Pixel>,
 
     texture_main: Texture2D,
-    shader_texture: Texture2D,
 
     updated_last_frame: bool,
 }
@@ -261,7 +260,6 @@ impl Chunk {
             last_updates,
 
             texture_main: main_texture,
-            shader_texture,
 
             updated_last_frame: false,
         }
@@ -342,7 +340,6 @@ impl Chunk {
     /// but this is fine for now
     pub fn update_textures(&mut self) {
         self.update_main_teture();
-        self.update_shader_teture();
     }
 
     pub fn update_main_teture(&mut self) {
@@ -367,30 +364,6 @@ impl Chunk {
         }
 
         self.texture_main.update(&image);
-    }
-
-    pub fn update_shader_teture(&mut self) {
-        let mut image = Image::gen_image_color(
-            CHUNK_SIZE.0 as u16,
-            CHUNK_SIZE.1 as u16,
-            Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.0,
-            },
-        );
-
-        for y in 0..CHUNK_SIZE.1 {
-            for x in 0..CHUNK_SIZE.0 {
-                if let Some(pixel) = self.get(x as i32, y as i32) {
-                    let color = pixel.color();
-                    image.set_pixel(x as u32, y as u32, color);
-                }
-            }
-        }
-
-        self.shader_texture.update(&image);
     }
 
     /// Draw the chunk's texture to the screen in the appropriate coordinates
