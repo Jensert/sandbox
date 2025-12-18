@@ -74,7 +74,7 @@ impl ChunkGrid {
                             // Check if the chunk exists
                             if let Some(chunk) = old_chunk {
                                 // Get the pixel from the old chunk
-                                let pixel =
+                                let mut pixel =
                                     chunk.remove(movement.old_position.0, movement.old_position.1);
                                 // Get the new chunk where the pixel should move
                                 let chunk = self.grid.get_mut(&chunk_key);
@@ -269,7 +269,7 @@ impl Chunk {
 
     /// The update function returns a vector of cross gridmovements. The return type is only used
     /// by the parent struct ChunkGrid to handle cross chunk movements.
-    /// All mvoements in-chunk are handled by the chunk itself in their update function
+    /// All movements in-chunk are handled by the chunk itself in their update function
     pub fn update(&mut self, rng: &RandGenerator) -> Vec<GridMovement> {
         self.last_updates.clear();
         // We filter_map() the hashmap
@@ -324,7 +324,7 @@ impl Chunk {
                 if self.last_updates.contains_key(&movement.new_position) {
                     continue;
                 }
-                let pixel = self.remove(movement.old_position.0, movement.old_position.1); // First we remove the pixel from the key at the old position
+                let mut pixel = self.remove(movement.old_position.0, movement.old_position.1); // First we remove the pixel from the key at the old position
                 self.set(movement.new_position.0, movement.new_position.1, pixel); // Then we insert that pixel into a new key
                 self.last_updates.insert(movement.new_position, pixel); // And also insert it into the updated hashmap
             }
@@ -465,17 +465,51 @@ impl Chunk {
         let index = Chunk::index(x, y);
         self.chunk.get(index)
     }
-    pub fn set(&mut self, x: i32, y: i32, pixel: Pixel) {
+    pub fn get_mut(&mut self, x: i32, y: i32) -> Option<&mut Pixel> {
+        let index = Chunk::index(x, y);
+        self.chunk.get_mut(index)
+    }
+    pub fn set(&mut self, x: i32, y: i32, mut pixel: Pixel) {
         let index = Chunk::index(x, y);
         self.chunk[index] = pixel;
+        self.notify_stability_change(x, y);
         self.updated_last_frame = true;
     }
     pub fn remove(&mut self, x: i32, y: i32) -> Pixel {
         let index = Chunk::index(x, y);
         let old = self.chunk[index];
         self.chunk[index] = Pixel::empty();
+        self.notify_stability_change(x, y);
         self.updated_last_frame = true;
         old
+    }
+    /// Function that is called whenever a Pixel is set() or remove() from a Chunk
+    /// This updates the stability for that pixel that is set or removed,
+    /// and also updates the stability for the left, right and top neighbouring pixels
+    pub fn notify_stability_change(&mut self, x: i32, y: i32) {
+        //               current (1 above )  ( 1 left )  (1 right )
+        let positions = [(x, y), (x, y - 1), (x - 1, y), (x + 1, y)];
+
+        for (nx, ny) in positions {
+            if nx < 0 || ny < 0 || nx >= self.width || ny >= self.height {
+                continue;
+            }
+
+            // Phase 1: calclulate stability and put the in a tuple
+            let (stability, state) = {
+                let pixel = match self.get(nx, ny) {
+                    Some(p) => p,
+                    None => continue,
+                };
+                pixel.calculate_stability(self, nx, ny)
+            };
+
+            // Phase 2: write stabilities to the pixels
+            if let Some(pixel) = self.get_mut(nx, ny) {
+                pixel.set_stability(stability);
+                pixel.set_state(state);
+            }
+        }
     }
 
     pub fn clear(&mut self) {
@@ -506,6 +540,14 @@ impl GridQuery {
             GridQuery::OutOfBounds => true,
             GridQuery::Hit(_) => false,
             GridQuery::None => true,
+        }
+    }
+
+    pub fn is_solid(&self) -> Option<&Pixel> {
+        match self {
+            GridQuery::OutOfBounds => None,
+            GridQuery::None => None,
+            GridQuery::Hit(pixel) => Some(pixel),
         }
     }
 }

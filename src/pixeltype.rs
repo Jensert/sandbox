@@ -266,23 +266,28 @@ impl PixelType {
         return false;
     }
 
-    pub fn state(&self) -> PixelState {
+    pub fn matter(&self) -> PixelMatter {
         match self {
-            PixelType::Air => PixelState::Gas,
-            PixelType::Sand => PixelState::Solid,
-            PixelType::Water => PixelState::Liquid,
-            PixelType::Lava => PixelState::Liquid,
-            PixelType::Dirt => PixelState::Solid,
-            PixelType::Stone => PixelState::Solid,
-            PixelType::HardStone => PixelState::Solid,
-            PixelType::Grass => PixelState::Solid,
+            PixelType::Air => PixelMatter::Gas,
+            PixelType::Sand => PixelMatter::Solid,
+            PixelType::Water => PixelMatter::Liquid,
+            PixelType::Lava => PixelMatter::Liquid,
+            PixelType::Dirt => PixelMatter::Solid,
+            PixelType::Stone => PixelMatter::Solid,
+            PixelType::HardStone => PixelMatter::Solid,
+            PixelType::Grass => PixelMatter::Solid,
         }
     }
 }
 
 #[derive(PartialEq, Eq)]
-pub enum PixelState {
+pub enum PixelMatter {
     Solid,
     Liquid,
     Gas,
+}
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum PixelState {
+    Stable,
+    Falling,
 }
