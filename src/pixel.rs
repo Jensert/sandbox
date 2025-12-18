@@ -49,6 +49,9 @@ impl Pixel {
     pub fn provides_support(&self) -> bool {
         self.matter() == PixelMatter::Solid && self.state == PixelState::Stable
     }
+    pub fn stability(&self) -> f32 {
+        self.stability
+    }
 
     pub fn set_stability(&mut self, new_stability: f32) {
         self.stability = new_stability;

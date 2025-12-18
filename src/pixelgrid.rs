@@ -143,6 +143,11 @@ impl ChunkGrid {
             chunk.draw_border(*chunk_key_x, *chunk_key_y, render_ratio);
         }
     }
+    pub fn draw_stability(&self, render_ratio: (f32, f32)) {
+        for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
+            chunk.draw_stability(*chunk_key_x, *chunk_key_y, render_ratio);
+        }
+    }
 
     pub fn set_pixel(&mut self, world_position: Vec2, pixel: Pixel) {
         let chunk_position = ChunkPosition::from_world_position(world_position);
@@ -410,6 +415,25 @@ impl Chunk {
         draw_line(x, y, x, y + y_adjust, 1.0, WHITE);
         // Right border
         draw_line(x + x_adjust, y, x + x_adjust, y + y_adjust, 1.0, WHITE);
+    }
+
+    pub fn draw_stability(&self, chunk_key_x: i32, chunk_key_y: i32, render_ratio: (f32, f32)) {
+        let chunk_world_x = chunk_key_x as f32 * CHUNK_SIZE.0 as f32;
+        let chunk_world_y = chunk_key_y as f32 * CHUNK_SIZE.1 as f32;
+
+        for y in 0..CHUNK_SIZE.1 {
+            for x in 0..CHUNK_SIZE.0 {
+                if let Some(pixel) = self.get(x as i32, y as i32) {
+                    if pixel.pixel_type() != PixelType::Air {
+                        let color =
+                            Color::new(1.0 - pixel.stability(), pixel.stability(), 0.0, 1.0);
+                        let screen_x = (chunk_world_x + x as f32) * render_ratio.0;
+                        let screen_y = (chunk_world_y + y as f32) * render_ratio.1;
+                        draw_rectangle(screen_x, screen_y, 1.0, 1.0, color);
+                    }
+                }
+            }
+        }
     }
 
     pub fn query(&self, x: i32, y: i32) -> GridQuery {
