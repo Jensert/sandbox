@@ -578,7 +578,7 @@ impl GridQuery {
         }
     }
 
-    pub fn is_solid(&self) -> Option<&Pixel> {
+    pub fn is_occupied(&self) -> Option<&Pixel> {
         match self {
             GridQuery::OutOfBounds => None,
             GridQuery::None => None,

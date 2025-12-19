@@ -82,22 +82,22 @@ impl Pixel {
             return (1.0, PixelState::Stable);
         }
 
-        // If pixel below is solid then stability = 1.0
-        if let Some(p_below) = pixel_grid.query(x, y + 1).is_solid() {
+        // If pixel below is solid and has stability then return that pixels stability
+        if let Some(p_below) = pixel_grid.query(x, y + 1).is_occupied() {
             if p_below.matter() == PixelMatter::Solid && p_below.stability() > 0.0 {
-                return (1.0, PixelState::Stable);
+                return (p_below.stability(), PixelState::Stable);
             }
         }
 
         // get left and right neighbouring stabilities
         let pixel_left = pixel_grid
             .query(x - 1, y)
-            .is_solid()
+            .is_occupied()
             .map(|p| p.stability)
             .unwrap_or(0.0);
         let pixel_right = pixel_grid
             .query(x + 1, y)
-            .is_solid()
+            .is_occupied()
             .map(|p| p.stability)
             .unwrap_or(0.0);
 
