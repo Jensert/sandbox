@@ -1,8 +1,8 @@
 use std::cmp::max;
 
-use crate::RENDER_SIZE;
 use crate::pixelgrid::{Chunk, GridMovement, GridQuery};
 use crate::pixeltype::{AIR, PixelMatter, PixelState, PixelType};
+use crate::{CHUNK_SIZE, RENDER_SIZE};
 use macroquad::{prelude::*, rand::RandGenerator};
 
 #[derive(Clone, Copy)]
@@ -52,6 +52,9 @@ impl Pixel {
     pub fn stability(&self) -> f32 {
         self.stability
     }
+    pub fn state(&self) -> PixelState {
+        self.state
+    }
 
     pub fn set_stability(&mut self, new_stability: f32) {
         self.stability = new_stability;
@@ -60,25 +63,32 @@ impl Pixel {
         self.state = new_state;
     }
 
-    pub fn calculate_stability(&self, pixel_grid: &Chunk, x: i32, y: i32) -> (f32, PixelState) {
-        // If self is not solid or if self state is falling then stability = 0.0
+    pub fn calculate_stability(
+        &self,
+        pixel_grid: &Chunk,
+        x: i32,
+        y: i32,
+        chunk_key: (i32, i32),
+    ) -> (f32, PixelState) {
+        // If self is not solid (like Water) stability = 0.0
         if self.matter() != PixelMatter::Solid {
             return (0.0, PixelState::Falling);
         }
 
-        // If floor of map is reached, then always return stable
-        if y == RENDER_SIZE.1 as i32 - 1 {
+        let world_y = chunk_key.1 * CHUNK_SIZE.1 as i32 + y;
+
+        // If floor of map is reached or Pixel has no decay, then always return stable
+        if world_y >= RENDER_SIZE.1 as i32 - 1 || self.stability_decay() == 0.0 {
             return (1.0, PixelState::Stable);
         }
 
-        let query_below = pixel_grid.query(x, y + 1);
-
         // If pixel below is solid then stability = 1.0
         if let Some(p_below) = pixel_grid.query(x, y + 1).is_solid() {
-            if p_below.provides_support() {
+            if p_below.matter() == PixelMatter::Solid && p_below.stability() > 0.0 {
                 return (1.0, PixelState::Stable);
             }
         }
+
         // get left and right neighbouring stabilities
         let pixel_left = pixel_grid
             .query(x - 1, y)
@@ -91,8 +101,10 @@ impl Pixel {
             .map(|p| p.stability)
             .unwrap_or(0.0);
 
-        let max_neighbour_stability = pixel_left.max(pixel_right); // Get maximum of the neighbouring stabilities
-        let stability = clamp(max_neighbour_stability - self.stability_decay(), 0.0, 1.0); // return value is new stability between 0.0 or 1.0
+        // Take maximum neighbour stability
+        let max_neighbour_stability = pixel_left.max(pixel_right);
+        // Subtract this pixels decay rate
+        let stability = clamp(max_neighbour_stability - self.stability_decay(), 0.0, 1.0);
 
         let state = if stability > 0.0 {
             PixelState::Stable
@@ -100,7 +112,7 @@ impl Pixel {
             PixelState::Falling
         };
 
-        return (stability, state);
+        (stability, state)
     }
 
     pub fn update_new(

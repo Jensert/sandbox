@@ -1,9 +1,9 @@
-use crate::{CHUNK_SIZE, pixel::Pixel, pixeltype::PixelType};
+use crate::{CHUNK_SIZE, RENDER_SIZE, pixel::Pixel, pixeltype::PixelType};
 use macroquad::{
     prelude::*,
     rand::{ChooseRandom, RandGenerator},
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 pub struct ChunkPosition {
@@ -469,46 +469,84 @@ impl Chunk {
     pub fn set(&mut self, x: i32, y: i32, mut pixel: Pixel) {
         let index = Chunk::index(x, y);
         self.chunk[index] = pixel;
-        self.notify_stability_change(x, y);
         self.updated_last_frame = true;
+
+        self.notify_stability_change(x, y);
     }
     pub fn remove(&mut self, x: i32, y: i32) -> Pixel {
         let index = Chunk::index(x, y);
         let old = self.chunk[index];
         self.chunk[index] = Pixel::empty();
-        self.notify_stability_change(x, y);
         self.updated_last_frame = true;
+
+        self.notify_stability_change(x, y);
         old
     }
     /// Function that is called whenever a Pixel is set() or remove() from a Chunk
     /// This updates the stability for that pixel that is set or removed,
     /// and also updates the stability for the left, right and top neighbouring pixels
     pub fn notify_stability_change(&mut self, x: i32, y: i32) {
-        //               current (1 above )  ( 1 left )  (1 right )
-        let positions = [(x, y), (x, y - 1), (x - 1, y), (x + 1, y)];
+        // Use a queue to process stability changes
+        let mut to_check = vec![(x, y)];
+        let mut checked = HashSet::new();
 
-        for (nx, ny) in positions {
-            if nx < 0 || ny < 0 || nx >= self.width || ny >= self.height {
-                continue;
+        while let Some((cx, cy)) = to_check.pop() {
+            if !checked.insert((cx, cy)) {
+                continue; // already processed
             }
 
-            // Phase 1: calclulate stability and put the in a tuple
-            let (stability, state) = {
-                let pixel = match self.get(nx, ny) {
+            // If out of bounds then skip
+            if cx < 0 || cy < 0 || cx >= self.width || cy >= self.height {
+                continue;
+            }
+            // Phase 1: calclulate stability and return the stability and state in a tuple
+            let (new_stability, new_state) = {
+                let pixel = match self.get(cx, cy) {
                     Some(p) => p,
                     None => continue,
                 };
-                pixel.calculate_stability(self, nx, ny)
+                pixel.calculate_stability(self, cx, cy, self.key)
             };
 
-            // Phase 2: write stabilities to the pixels
-            if let Some(pixel) = self.get_mut(nx, ny) {
-                pixel.set_stability(stability);
-                pixel.set_state(state);
+            // Phase 2: write stabilities and states to the pixels
+            if let Some(pixel) = self.get_mut(cx, cy) {
+                let old_stability = pixel.stability();
+                let old_state = pixel.state();
+
+                if old_stability != new_stability || old_state != new_state {
+                    pixel.set_stability(new_stability);
+                    pixel.set_state(new_state);
+                    to_check.push((cx - 1, cy)); // Enqueue left
+                    to_check.push((cx + 1, cy)); // Enqueue right
+                    to_check.push((cx, cy - 1)); // Enqueue above
+                    if new_stability > 0.0 {
+                        println!("{new_stability}");
+                    }
+                }
             }
         }
     }
 
+    /// full stability recalculation for debugging
+    pub fn recalculate_all_stability(&mut self) {
+        // Bottom to top (.rev()) to ensure correct propagation
+        for y in (0..self.height).rev() {
+            for x in 0..self.width {
+                let (stability, state) = {
+                    let pixel = match self.get(x, y) {
+                        Some(p) => p,
+                        None => continue,
+                    };
+                    pixel.calculate_stability(self, x, y, self.key)
+                };
+
+                if let Some(pixel) = self.get_mut(x, y) {
+                    pixel.set_stability(stability);
+                    pixel.set_state(state);
+                }
+            }
+        }
+    }
     pub fn clear(&mut self) {
         self.chunk.clear();
         for _ in 0..CHUNK_SIZE.0 {

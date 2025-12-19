@@ -118,6 +118,10 @@ impl MapGenerator {
         for layer in &self.layer_rules {
             layer.generate_layer(chunk_grid, rng);
         }
+
+        for chunk in chunk_grid.grid_mut().values_mut() {
+            chunk.recalculate_all_stability();
+        }
     }
 }
 
