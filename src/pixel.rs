@@ -82,10 +82,17 @@ impl Pixel {
             return (1.0, PixelState::Stable);
         }
 
-        // If pixel below is solid and has stability then return that pixels stability
+        // If pixel below is solid and has stability then return that pixels stability + (1 - stability decay)
         if let Some(p_below) = pixel_grid.query(x, y + 1).is_occupied() {
             if p_below.matter() == PixelMatter::Solid && p_below.stability() > 0.0 {
-                return (p_below.stability(), PixelState::Stable);
+                return (
+                    clamp(
+                        p_below.stability() + (1.0 - self.stability_decay()),
+                        0.0,
+                        1.0,
+                    ),
+                    PixelState::Stable,
+                );
             }
         }
 
