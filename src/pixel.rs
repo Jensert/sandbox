@@ -89,30 +89,34 @@ impl Pixel {
             }
         }
 
-        // get left and right neighbouring stabilities
-        let pixel_left = pixel_grid
-            .query(x - 1, y)
-            .is_occupied()
-            .map(|p| p.stability)
-            .unwrap_or(0.0);
-        let pixel_right = pixel_grid
-            .query(x + 1, y)
-            .is_occupied()
-            .map(|p| p.stability)
-            .unwrap_or(0.0);
+        // if the pixel is stable, inherit stability from left and right
+        if self.state == PixelState::Stable {
+            // get left and right neighbouring stabilities
+            let pixel_left = pixel_grid
+                .query(x - 1, y)
+                .is_occupied()
+                .map(|p| p.stability)
+                .unwrap_or(0.0);
+            let pixel_right = pixel_grid
+                .query(x + 1, y)
+                .is_occupied()
+                .map(|p| p.stability)
+                .unwrap_or(0.0);
 
-        // Take maximum neighbour stability
-        let max_neighbour_stability = pixel_left.max(pixel_right);
-        // Subtract this pixels decay rate
-        let stability = clamp(max_neighbour_stability - self.stability_decay(), 0.0, 1.0);
+            // Take maximum neighbour stability
+            let max_neighbour_stability = pixel_left.max(pixel_right);
+            // Subtract this pixels decay rate
+            let stability = clamp(max_neighbour_stability - self.stability_decay(), 0.0, 1.0);
 
-        let state = if stability > 0.0 {
-            PixelState::Stable
-        } else {
-            PixelState::Falling
-        };
+            let state = if stability > 0.0 {
+                PixelState::Stable
+            } else {
+                PixelState::Falling
+            };
 
-        (stability, state)
+            return (stability, state);
+        }
+        (self.stability, self.state)
     }
 
     pub fn update_new(
