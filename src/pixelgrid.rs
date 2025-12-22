@@ -169,6 +169,38 @@ impl ChunkGrid {
             );
     }
 
+    pub fn query_world(&self, world_x: i32, world_y: i32) -> GridQuery {
+        let chunk_key_x = world_x % CHUNK_SIZE.0 as i32;
+        let chunk_key_y = world_y % CHUNK_SIZE.1 as i32;
+        let chunk_x = world_x - (chunk_key_x * CHUNK_SIZE.0 as i32);
+        let chunk_y = world_x - (chunk_key_y * CHUNK_SIZE.1 as i32);
+        if let Some(chunk) = self.grid.get(&(chunk_key_x, chunk_key_y)) {
+            if let Some(pixel) = chunk.get(chunk_x, chunk_y) {
+                GridQuery::Hit(*pixel)
+            } else {
+                GridQuery::OutOfBounds
+            }
+        } else {
+            GridQuery::OutOfBounds
+        }
+    }
+    pub fn query_world_with_chunk_key(
+        &self,
+        chunk_key: (i32, i32),
+        chunk_x: i32,
+        chunk_y: i32,
+    ) -> GridQuery {
+        if let Some(chunk) = self.grid.get(&chunk_key) {
+            if let Some(pixel) = chunk.get(chunk_x, chunk_y) {
+                GridQuery::Hit(*pixel)
+            } else {
+                GridQuery::OutOfBounds
+            }
+        } else {
+            GridQuery::OutOfBounds
+        }
+    }
+
     /// Check if the grid position (world position) is free, chunk-wide
     /// This requires the supplied GridMovement struct to have a chunk key
     /// and a chunk coordinate
