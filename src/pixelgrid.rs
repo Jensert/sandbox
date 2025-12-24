@@ -51,20 +51,21 @@ impl ChunkGrid {
 
     pub fn update(&mut self, rng: &RandGenerator) {
         // Updating should be multiple stages:
-        // First: apply all in-chunk movements
-        // Second: get all cross-chunk movements for each chunk
-        // Third: apply all cross-chunk movements
-        let mut cross_chunk_movements: Vec<Vec<GridMovement>> = vec![];
+        // First: get all movements for each chunk
+        // Second: apply all movements
+        let mut chunk_movements: Vec<Vec<GridMovement>> = vec![];
         for ((_x, _y), chunk) in self.grid.iter_mut() {
-            cross_chunk_movements.push(chunk.update(rng)); // Update all in-chunk movements and return all crosschunk movements
+            chunk_movements.push(chunk.get_chunk_movements(rng)); // Update all in-chunk movements and return all crosschunk movements
         }
 
         // Apply all cross chunk movements
-        for chunk in cross_chunk_movements {
+        for chunk in chunk_movements {
             for movement in chunk {
                 match movement.new_chunk {
                     None => {
-                        println!("chunk key not set! skipping movement");
+                        panic!(
+                            "chunk key not set! check Chunk.update() function to make sure chunk key is always set"
+                        );
                     }
                     Some(chunk_key) => {
                         // We have to remove the pixel from the old position here
@@ -74,7 +75,7 @@ impl ChunkGrid {
                             // Check if the chunk exists
                             if let Some(chunk) = old_chunk {
                                 // Get the pixel from the old chunk
-                                let mut pixel =
+                                let pixel =
                                     chunk.remove(movement.old_position.0, movement.old_position.1);
                                 // Get the new chunk where the pixel should move
                                 let chunk = self.grid.get_mut(&chunk_key);
@@ -302,10 +303,9 @@ impl Chunk {
         }
     }
 
-    /// The update function returns a vector of cross gridmovements. The return type is only used
-    /// by the parent struct ChunkGrid to handle cross chunk movements.
-    /// All movements in-chunk are handled by the chunk itself in their update function
-    pub fn update(&mut self, rng: &RandGenerator) -> Vec<GridMovement> {
+    /// The update function returns a gridmovements. The return type is used
+    /// by the parent struct ChunkGrid to handle all chunk movements.
+    pub fn get_chunk_movements(&mut self, rng: &RandGenerator) -> Vec<GridMovement> {
         self.last_updates.clear();
         // We filter_map() the hashmap
         // First we match the PixelType to call the appropriate pixel update function
@@ -318,57 +318,17 @@ impl Chunk {
         for y in 0..CHUNK_SIZE.1 {
             for x in 0..CHUNK_SIZE.0 {
                 if let Some(pixel) = self.get(x as i32, y as i32) {
-                    if let Some(movement) = pixel.update_new(self, x as i32, y as i32, rng) {
+                    if let Some(mut movement) = pixel.update_new(self, x as i32, y as i32, rng) {
+                        movement.set_chunk_keys(self.key);
                         changes.push(movement);
                     }
                 }
             }
         }
-
-        // If no changes happened this frame, dont do anything
-        if changes.is_empty() {
-            if self.updated_last_frame {
-                self.update_textures();
-            }
-            self.updated_last_frame = false;
-            return vec![]; // return empty vector
-        } else {
-            // Apply chanches if there are any
-            self.updated_last_frame = true;
-            // Before we apply the changes we shuffle the changes vector, so that the updates are applied in random order
-            // We do this to make it seem more natural and to prevent certain softlocks
-            changes.shuffle();
-            // Here we loop over the changes vector and apply all modifications in the grid hashmap
-            // First we check if the new position is out of bounds and should move to a different chunk
-            // We also check if the new position is already been occupied in a previous move byh another pixel
-            // We do this to prevent 2 pixels moving into the same space in 1 move, which would cause this to overwrite
-            // the pixel
-            let mut cross_chunk_movements = vec![];
-            for mut movement in changes {
-                // Check if the movement is out of bounds
-                if movement.out_of_bounds() {
-                    // if it is, push to the cross_movement vector
-                    movement.set_chunk_keys(self.key);
-                    //self.chunk.remove(&movement.old_position); // First we remove the pixel from the key at the old position
-                    // Push the movement to the cross_chunk vector
-                    // which will be returned to the parent ChunkGrid
-                    cross_chunk_movements.push(movement);
-                    continue;
-                }
-                // Skip update if the new position is already updated this frame
-                if self.last_updates.contains_key(&movement.new_position) {
-                    continue;
-                }
-                let mut pixel = self.remove(movement.old_position.0, movement.old_position.1); // First we remove the pixel from the key at the old position
-                self.set(movement.new_position.0, movement.new_position.1, pixel); // Then we insert that pixel into a new key
-                self.last_updates.insert(movement.new_position, pixel); // And also insert it into the updated hashmap
-            }
-
-            self.update_textures(); // Update the texture to apply the changes visually
-            // Return an empty vector for now
-
-            cross_chunk_movements
+        if !changes.is_empty() {
+            self.update_textures();
         }
+        return changes;
     }
 
     /// Update the chunks texture
@@ -551,9 +511,6 @@ impl Chunk {
                     to_check.push((cx - 1, cy)); // Enqueue left
                     to_check.push((cx + 1, cy)); // Enqueue right
                     to_check.push((cx, cy - 1)); // Enqueue above
-                    if new_stability > 0.0 {
-                        println!("{new_stability}");
-                    }
                 }
             }
         }
