@@ -1,8 +1,5 @@
-use crate::{CHUNK_SIZE, RENDER_SIZE, pixel::Pixel, pixeltype::PixelType};
-use macroquad::{
-    prelude::*,
-    rand::{ChooseRandom, RandGenerator},
-};
+use crate::{CHUNK_SIZE, pixel::Pixel, pixeltype::PixelType};
+use macroquad::{prelude::*, rand::RandGenerator};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
@@ -78,28 +75,18 @@ impl ChunkGrid {
                                 let pixel =
                                     chunk.remove(movement.old_position.0, movement.old_position.1);
                                 // Get the new chunk where the pixel should move
-                                let chunk = self.grid.get_mut(&chunk_key);
-                                match chunk {
-                                    // Check if the new chunk exists
-                                    Some(chunk) => {
-                                        // Check if new chunk position is free
-                                        if chunk
-                                            .query(movement.new_position.0, movement.new_position.1)
-                                            .is_free()
-                                        {
-                                            // Set the pixel in the new chunk
-                                            chunk.set(
-                                                movement.new_position.0,
-                                                movement.new_position.1,
-                                                pixel,
-                                            );
-                                        }
+                                if let Some(chunk) = self.grid.get_mut(&chunk_key) {
+                                    if chunk
+                                        .query(movement.new_position.0, movement.new_position.1)
+                                        .is_free()
+                                    {
+                                        // Set the pixel in the new chunk
+                                        chunk.set(
+                                            movement.new_position.0,
+                                            movement.new_position.1,
+                                            pixel,
+                                        );
                                     }
-                                    None => unreachable!(), // Do nothing because chunk does not exist
-                                                            // If this None branch is reached, then the pixel will simply be removed
-                                                            // from the simulation. Because the pixel is removed from the chunk from the old
-                                                            // check, but is never readded in the new position. Currently this is fine, but
-                                                            // wil probnably spawn some unwanted bugs later on
                                 }
                             }
                         }
