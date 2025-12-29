@@ -68,12 +68,12 @@ impl ChunkGrid {
                         // We have to remove the pixel from the old position here
                         if self.is_free(&movement) {
                             // Get the old chunk where the pixel has to be removed
-                            let old_chunk = self.grid.get_mut(&movement.old_chunk.unwrap());
-                            // Check if the chunk exists
-                            if let Some(chunk) = old_chunk {
+                            if let Some(old_chunk) = self.grid.get_mut(&movement.old_chunk.unwrap())
+                            {
+                                // Check if the chunk exists
                                 // Get the pixel from the old chunk
-                                let pixel =
-                                    chunk.remove(movement.old_position.0, movement.old_position.1);
+                                let pixel = old_chunk
+                                    .remove(movement.old_position.0, movement.old_position.1);
                                 // Get the new chunk where the pixel should move
                                 if let Some(chunk) = self.grid.get_mut(&chunk_key) {
                                     if chunk
@@ -137,24 +137,31 @@ impl ChunkGrid {
         }
     }
 
+    /// Set pixel to a position based on world_position
+    /// This function already does boundary checks to make sure
+    /// that coordinates out of bounds are skipped to prevent panics
     pub fn set_pixel(&mut self, world_position: Vec2, pixel: Pixel) {
         let chunk_position = ChunkPosition::from_world_position(world_position);
-        self.grid.get_mut(&chunk_position.chunk_key).unwrap().set(
-            chunk_position.chunk_coordinate.0,
-            chunk_position.chunk_coordinate.1,
-            pixel,
-        );
+        if let Some(chunk) = self.grid.get_mut(&chunk_position.chunk_key) {
+            chunk.set(
+                chunk_position.chunk_coordinate.0,
+                chunk_position.chunk_coordinate.1,
+                pixel,
+            )
+        }
     }
 
+    /// Remove pixel based on world_position
+    /// This function already does boundary checks to make sure
+    /// that coordinates out of bounds are skipped to prevent panics
     pub fn erase_pixel(&mut self, world_position: Vec2) {
         let chunk_position = ChunkPosition::from_world_position(world_position);
-        self.grid
-            .get_mut(&chunk_position.chunk_key)
-            .unwrap()
-            .remove(
+        if let Some(chunk) = self.grid.get_mut(&chunk_position.chunk_key) {
+            chunk.remove(
                 chunk_position.chunk_coordinate.0,
                 chunk_position.chunk_coordinate.1,
             );
+        }
     }
 
     pub fn query_world(&self, world_x: i32, world_y: i32) -> GridQuery {
