@@ -1,11 +1,6 @@
 use macroquad::{math::Vec2, rand::RandGenerator};
 
-use crate::{
-    RENDER_SIZE,
-    pixel::Pixel,
-    pixelgrid::{ChunkGrid, ChunkPosition},
-    pixeltype::PixelType,
-};
+use crate::{RENDER_SIZE, pixelgrid::ChunkGrid, pixeltype::PixelType};
 
 pub struct MapGenerator {
     layer_rules: Vec<MapLayerRule>,
@@ -119,9 +114,7 @@ impl MapGenerator {
             layer.generate_layer(chunk_grid, rng);
         }
 
-        for chunk in chunk_grid.grid_mut().values_mut() {
-            chunk.recalculate_all_stability();
-        }
+        chunk_grid.recalculate_all_stability();
     }
 }
 
@@ -155,16 +148,8 @@ impl MapLayerRule {
             for x in 0..RENDER_SIZE.0 {
                 // If probability is reached then generate tile
                 if rng.gen_range(0.0, 1.0) < chance {
-                    let pos = Vec2::new(x as f32, y as f32);
-                    let chunk_pos = ChunkPosition::from_world_position(pos);
-
-                    if let Some(chunk) = chunk_grid.grid_mut().get_mut(&chunk_pos.chunk_key) {
-                        chunk.set(
-                            chunk_pos.chunk_coordinate.0,
-                            chunk_pos.chunk_coordinate.1,
-                            Pixel::from_pixel_type(self.pixel_type, &rng),
-                        );
-                    }
+                    let world_pos = Vec2::new(x as f32, y as f32);
+                    chunk_grid.set_pixel(world_pos, self.pixel_type.to_pixel());
                 }
             }
         }

@@ -1,4 +1,8 @@
-use crate::{CHUNK_SIZE, pixel::Pixel, pixeltype::PixelType};
+use crate::{
+    CHUNK_SIZE, RENDER_SIZE,
+    pixel::Pixel,
+    pixeltype::{PixelMatter, PixelState, PixelType},
+};
 use macroquad::{prelude::*, rand::RandGenerator};
 use std::collections::{HashMap, HashSet};
 
@@ -64,30 +68,33 @@ impl ChunkGrid {
                             "chunk key not set! check Chunk.update() function to make sure chunk key is always set"
                         );
                     }
-                    Some(chunk_key) => {
+                    Some(_) => {
                         // We have to remove the pixel from the old position here
                         if self.is_free(&movement) {
-                            // Get the old chunk where the pixel has to be removed
-                            if let Some(old_chunk) = self.grid.get_mut(&movement.old_chunk.unwrap())
-                            {
-                                // Check if the chunk exists
-                                // Get the pixel from the old chunk
-                                let pixel = old_chunk
-                                    .remove(movement.old_position.0, movement.old_position.1);
-                                // Get the new chunk where the pixel should move
-                                if let Some(chunk) = self.grid.get_mut(&chunk_key) {
-                                    if chunk
-                                        .query(movement.new_position.0, movement.new_position.1)
-                                        .is_free()
-                                    {
-                                        // Set the pixel in the new chunk
-                                        chunk.set(
-                                            movement.new_position.0,
-                                            movement.new_position.1,
-                                            pixel,
-                                        );
-                                    }
-                                }
+                            let old_world_position = {
+                                (
+                                    movement.old_position.0
+                                        + (movement.old_chunk.unwrap().0 * CHUNK_SIZE.0 as i32),
+                                    movement.old_position.1
+                                        + (movement.old_chunk.unwrap().1 * CHUNK_SIZE.1 as i32),
+                                )
+                            };
+                            let new_world_position = {
+                                (
+                                    movement.new_position.0
+                                        + (movement.new_chunk.unwrap().0 * CHUNK_SIZE.0 as i32),
+                                    movement.new_position.1
+                                        + (movement.new_chunk.unwrap().1 * CHUNK_SIZE.1 as i32),
+                                )
+                            };
+                            if let Some(pixel) = self.erase_pixel(vec2(
+                                old_world_position.0 as f32,
+                                old_world_position.1 as f32,
+                            )) {
+                                self.set_pixel(
+                                    vec2(new_world_position.0 as f32, new_world_position.1 as f32),
+                                    pixel,
+                                );
                             }
                         }
                     }
@@ -149,31 +156,157 @@ impl ChunkGrid {
                 pixel,
             )
         }
+
+        self.propagate_stability_change(world_position);
     }
 
     /// Remove pixel based on world_position
     /// This function already does boundary checks to make sure
     /// that coordinates out of bounds are skipped to prevent panics
-    pub fn erase_pixel(&mut self, world_position: Vec2) {
+    pub fn erase_pixel(&mut self, world_position: Vec2) -> Option<Pixel> {
         let chunk_position = ChunkPosition::from_world_position(world_position);
-        if let Some(chunk) = self.grid.get_mut(&chunk_position.chunk_key) {
-            chunk.remove(
+        let erased_pixel = {
+            let chunk = self.grid.get_mut(&chunk_position.chunk_key)?;
+            Some(chunk.remove(
                 chunk_position.chunk_coordinate.0,
                 chunk_position.chunk_coordinate.1,
-            );
+            ))
+        };
+        self.propagate_stability_change(world_position);
+        erased_pixel
+    }
+
+    /// Function that is called whenever a Pixel is set() or remove() from a Chunk
+    /// This updates the stability for that pixel that is set or removed,
+    /// and also updates the stability for the left, right and top neighbouring pixels
+    pub fn propagate_stability_change(&mut self, world_position: Vec2) {
+        let x = world_position.x as i32;
+        let y = world_position.y as i32;
+        // Use a queue to process stability changes
+        let mut to_check = vec![(x, y)];
+
+        let mut checked = HashSet::new();
+
+        while let Some((x, y)) = to_check.pop() {
+            if !checked.insert((x, y)) {
+                continue; // already processed
+            }
+
+            // If out of bounds then skip
+            if x < 0 || y < 0 || x >= RENDER_SIZE.0 as i32 || y >= RENDER_SIZE.1 as i32 - 1 {
+                continue;
+            }
+            // Phase 1: calclulate stability and return the stability and state in a tuple
+            let (new_stability, new_state) = { self.calculate_pixel_stability(x, y) };
+
+            // Phase 2: write stabilities and states to the pixels
+            if let Some(pixel) = self.get_pixel_mut(x, y) {
+                let old_stability = pixel.stability();
+                let old_state = pixel.state();
+
+                if old_stability != new_stability || old_state != new_state {
+                    pixel.set_stability(new_stability);
+                    pixel.set_state(new_state);
+                    to_check.push((x - 1, y)); // Enqueue left
+                    to_check.push((x + 1, y)); // Enqueue right
+                    to_check.push((x, y - 1)); // Enqueue above
+                }
+            }
         }
     }
 
+    /// Get the pixel stability of the given world coordinate
+    /// This returns a tuple with a float and a PixelState
+    /// if the world coordinate is out of bounds
+    /// The tuple will contain (0.0, PixelState::Stable)
+    pub fn calculate_pixel_stability(&self, world_x: i32, world_y: i32) -> (f32, PixelState) {
+        if let Some(pixel) = self.get_pixel(world_x, world_y) {
+            // If pixel is not solid (like Water) stability = 0.0
+            if pixel.matter() != PixelMatter::Solid {
+                return (0.0, PixelState::Falling);
+            }
+
+            // If floor of map is reached or Pixel has no decay, then always return stable
+            if world_y >= RENDER_SIZE.1 as i32 - 1 || pixel.stability_decay() == 0.0 {
+                return (1.0, PixelState::Stable);
+            }
+
+            // If pixel below is solid and has stability then return that pixels stability + (1 - stability decay)
+            if let Some(p_below) = self.query_world(world_x, world_y + 1).is_occupied() {
+                if p_below.matter() == PixelMatter::Solid && p_below.stability() > 0.0 {
+                    return (
+                        clamp(
+                            p_below.stability() + (1.0 - pixel.stability_decay()),
+                            0.0,
+                            1.0,
+                        ),
+                        PixelState::Stable,
+                    );
+                }
+            }
+
+            // if the pixel is stable, inherit stability from left and right
+            if pixel.state() == PixelState::Stable {
+                // get left and right neighbouring stabilities
+                let pixel_left = self
+                    .query_world(world_x - 1, world_y)
+                    .is_occupied()
+                    .map(|p| p.stability())
+                    .unwrap_or(0.0);
+                let pixel_right = self
+                    .query_world(world_x + 1, world_y)
+                    .is_occupied()
+                    .map(|p| p.stability())
+                    .unwrap_or(0.0);
+
+                // Take maximum neighbour stability
+                let max_neighbour_stability = pixel_left.max(pixel_right);
+                // Subtract this pixels decay rate
+                let stability = clamp(max_neighbour_stability - pixel.stability_decay(), 0.0, 1.0);
+
+                let state = if stability > 0.0 {
+                    PixelState::Stable
+                } else {
+                    PixelState::Falling
+                };
+
+                return (stability, state);
+            }
+            (pixel.stability(), pixel.state())
+        } else {
+            // Out of bounds returns stable pixel for now
+            return (1.0, PixelState::Stable);
+        }
+    }
+
+    /// full stability recalculation for debugging
+    pub fn recalculate_all_stability(&mut self) {
+        println!("Recalculating all stability");
+        // Bottom to top (.rev()) to ensure correct propagation
+        for y in (0..RENDER_SIZE.1 as i32).rev() {
+            for x in 0..RENDER_SIZE.0 as i32 {
+                let (stability, state) = self.calculate_pixel_stability(x, y);
+                if let Some(pixel) = self.get_pixel_mut(x, y) {
+                    pixel.set_stability(stability);
+                    pixel.set_state(state);
+                };
+            }
+        }
+    }
+
+    /// Query the ChunkGrid with world coordiantes
+    /// Returns a GridQuery with the resulting *Pixel
+    /// or an OutOfBounds / None result
     pub fn query_world(&self, world_x: i32, world_y: i32) -> GridQuery {
-        let chunk_key_x = world_x % CHUNK_SIZE.0 as i32;
-        let chunk_key_y = world_y % CHUNK_SIZE.1 as i32;
-        let chunk_x = world_x - (chunk_key_x * CHUNK_SIZE.0 as i32);
-        let chunk_y = world_x - (chunk_key_y * CHUNK_SIZE.1 as i32);
+        let chunk_key_x = world_x.div_euclid(CHUNK_SIZE.0 as i32);
+        let chunk_key_y = world_y.div_euclid(CHUNK_SIZE.1 as i32);
+        let chunk_x = world_x.rem_euclid(CHUNK_SIZE.0 as i32);
+        let chunk_y = world_y.rem_euclid(CHUNK_SIZE.1 as i32);
         if let Some(chunk) = self.grid.get(&(chunk_key_x, chunk_key_y)) {
             if let Some(pixel) = chunk.get(chunk_x, chunk_y) {
                 GridQuery::Hit(*pixel)
             } else {
-                GridQuery::OutOfBounds
+                GridQuery::None
             }
         } else {
             GridQuery::OutOfBounds
@@ -193,6 +326,40 @@ impl ChunkGrid {
             }
         } else {
             GridQuery::OutOfBounds
+        }
+    }
+    /// Get unmutable pixel reference from the ChunkGrid with world coordinates
+    /// Returns an Option<&Pixel>
+    pub fn get_pixel(&self, world_x: i32, world_y: i32) -> Option<&Pixel> {
+        let chunk_key_x = world_x.div_euclid(CHUNK_SIZE.0 as i32);
+        let chunk_key_y = world_y.div_euclid(CHUNK_SIZE.1 as i32);
+        let chunk_x = world_x.rem_euclid(CHUNK_SIZE.0 as i32);
+        let chunk_y = world_y.rem_euclid(CHUNK_SIZE.1 as i32);
+        if let Some(chunk) = self.grid.get(&(chunk_key_x, chunk_key_y)) {
+            if let Some(pixel) = chunk.get(chunk_x, chunk_y) {
+                Some(pixel)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+    /// Get a mutable pixel reference from the ChunkGrid with world coordinates
+    /// Returns an Option<&mut Pixel>
+    pub fn get_pixel_mut(&mut self, world_x: i32, world_y: i32) -> Option<&mut Pixel> {
+        let chunk_key_x = world_x.div_euclid(CHUNK_SIZE.0 as i32);
+        let chunk_key_y = world_y.div_euclid(CHUNK_SIZE.1 as i32);
+        let chunk_x = world_x.rem_euclid(CHUNK_SIZE.0 as i32);
+        let chunk_y = world_y.rem_euclid(CHUNK_SIZE.1 as i32);
+        if let Some(chunk) = self.grid.get_mut(&(chunk_key_x, chunk_key_y)) {
+            if let Some(pixel) = chunk.get_mut(chunk_x, chunk_y) {
+                Some(pixel)
+            } else {
+                None
+            }
+        } else {
+            None
         }
     }
 
@@ -319,7 +486,7 @@ impl Chunk {
                 }
             }
         }
-        if !changes.is_empty() {
+        if self.updated_last_frame || !changes.is_empty() {
             self.update_textures();
         }
         return changes;
@@ -372,18 +539,6 @@ impl Chunk {
                 ..Default::default()
             },
         );
-
-        /*
-        // Here we loop over the pixel grid to draw all the pixels
-        for y in 0..CHUNK_SIZE.1 {
-            for x in 0..CHUNK_SIZE.0 {
-                let index = Chunk::index(x as i32, y as i32);
-                if let Some(pixel_type) = self.chunk.get(index) {
-                    draw_pixel(*pixel_type, chunk_x + x as i32, chunk_y + y as i32);
-                }
-            }
-        }
-        */
     }
 
     pub fn draw_border(&self, chunk_key_x: i32, chunk_key_y: i32, render_ratio: (f32, f32)) {
@@ -444,20 +599,24 @@ impl Chunk {
     pub fn index(x: i32, y: i32) -> usize {
         (y * CHUNK_SIZE.0 as i32 + x) as usize
     }
+    /// Getter function for Chunk
+    /// Returns an Option<&Pixel>
     pub fn get(&self, x: i32, y: i32) -> Option<&Pixel> {
         let index = Chunk::index(x, y);
         self.chunk.get(index)
     }
+    /// Getter function for Chunk
+    /// Returns an Option<&mut Pixel>
     pub fn get_mut(&mut self, x: i32, y: i32) -> Option<&mut Pixel> {
         let index = Chunk::index(x, y);
         self.chunk.get_mut(index)
     }
-    pub fn set(&mut self, x: i32, y: i32, mut pixel: Pixel) {
+    /// Setter function for Chunk
+    /// Sets the pixel to the position
+    pub fn set(&mut self, x: i32, y: i32, pixel: Pixel) {
         let index = Chunk::index(x, y);
         self.chunk[index] = pixel;
         self.updated_last_frame = true;
-
-        self.notify_stability_change(x, y);
     }
     pub fn remove(&mut self, x: i32, y: i32) -> Pixel {
         let index = Chunk::index(x, y);
@@ -465,71 +624,9 @@ impl Chunk {
         self.chunk[index] = Pixel::empty();
         self.updated_last_frame = true;
 
-        self.notify_stability_change(x, y);
         old
     }
-    /// Function that is called whenever a Pixel is set() or remove() from a Chunk
-    /// This updates the stability for that pixel that is set or removed,
-    /// and also updates the stability for the left, right and top neighbouring pixels
-    pub fn notify_stability_change(&mut self, x: i32, y: i32) {
-        // Use a queue to process stability changes
-        let mut to_check = vec![(x, y)];
-        let mut checked = HashSet::new();
 
-        while let Some((cx, cy)) = to_check.pop() {
-            if !checked.insert((cx, cy)) {
-                continue; // already processed
-            }
-
-            // If out of bounds then skip
-            if cx < 0 || cy < 0 || cx >= self.width || cy >= self.height {
-                continue;
-            }
-            // Phase 1: calclulate stability and return the stability and state in a tuple
-            let (new_stability, new_state) = {
-                let pixel = match self.get(cx, cy) {
-                    Some(p) => p,
-                    None => continue,
-                };
-                pixel.calculate_stability(self, cx, cy, self.key)
-            };
-
-            // Phase 2: write stabilities and states to the pixels
-            if let Some(pixel) = self.get_mut(cx, cy) {
-                let old_stability = pixel.stability();
-                let old_state = pixel.state();
-
-                if old_stability != new_stability || old_state != new_state {
-                    pixel.set_stability(new_stability);
-                    pixel.set_state(new_state);
-                    to_check.push((cx - 1, cy)); // Enqueue left
-                    to_check.push((cx + 1, cy)); // Enqueue right
-                    to_check.push((cx, cy - 1)); // Enqueue above
-                }
-            }
-        }
-    }
-
-    /// full stability recalculation for debugging
-    pub fn recalculate_all_stability(&mut self) {
-        // Bottom to top (.rev()) to ensure correct propagation
-        for y in (0..self.height).rev() {
-            for x in 0..self.width {
-                let (stability, state) = {
-                    let pixel = match self.get(x, y) {
-                        Some(p) => p,
-                        None => continue,
-                    };
-                    pixel.calculate_stability(self, x, y, self.key)
-                };
-
-                if let Some(pixel) = self.get_mut(x, y) {
-                    pixel.set_stability(stability);
-                    pixel.set_state(state);
-                }
-            }
-        }
-    }
     pub fn clear(&mut self) {
         self.chunk.clear();
         for _ in 0..CHUNK_SIZE.0 {

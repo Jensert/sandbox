@@ -1,5 +1,4 @@
 use std::fs::read_to_string;
-use std::ops::DerefMut;
 
 use crate::brush::Brush;
 use crate::mapgenerator::MapGenerator;
@@ -166,7 +165,7 @@ impl UserInterface {
 
                 ui.label(
                     None,
-                    format!("Selected pixel: {}", brush.pixel_type().to_str()).as_str(),
+                    format!("Selected pixel: {}", brush.pixel_type().name_str()).as_str(),
                 );
                 ui.label(
                     None,

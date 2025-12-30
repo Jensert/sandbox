@@ -190,13 +190,12 @@ impl App {
         return m_world_pos;
     }
 
-    fn handle_mouse_input(&mut self, rng: &RandGenerator) {
+    fn handle_mouse_input(&mut self) {
         self.mouse_world_position = self.mouse_to_world();
 
         let mouse_world_position = self.mouse_world_position;
         if is_mouse_button_down(MouseButton::Left) {
-            self.brush()
-                .draw(mouse_world_position, self.chunks_mut(), rng);
+            self.brush().draw(mouse_world_position, self.chunks_mut());
         }
         if is_mouse_button_down(MouseButton::Right) {
             self.brush().erase(mouse_world_position, self.chunks_mut());
@@ -262,8 +261,8 @@ impl App {
         if is_key_released(KeyCode::Escape) {
             self.quit();
         }
-        if is_key_pressed(KeyCode::C) {
-            self.chunk_grid.clear();
+        if is_key_pressed(KeyCode::R) {
+            self.chunk_grid.recalculate_all_stability();
         }
         if is_key_pressed(KeyCode::GraveAccent) {
             self.user_interface.toggle_debug();
@@ -274,14 +273,10 @@ impl App {
         if is_key_released(KeyCode::LeftControl) {
             self.user_interface.disable_zoom();
         }
-
-        if is_key_released(KeyCode::R) {
-            self.user_interface_mut().read_shader_files();
-        }
     }
 
-    pub fn handle_input(&mut self, rng: &RandGenerator) {
-        self.handle_mouse_input(rng);
+    pub fn handle_input(&mut self) {
+        self.handle_mouse_input();
         self.handle_keyboard_input();
     }
 

@@ -1,6 +1,4 @@
-use std::cmp::max;
-
-use crate::pixelgrid::{Chunk, GridMovement, GridQuery};
+use crate::pixelgrid::{Chunk, GridMovement};
 use crate::pixeltype::{AIR, PixelMatter, PixelState, PixelType};
 use crate::{CHUNK_SIZE, RENDER_SIZE};
 use macroquad::{prelude::*, rand::RandGenerator};
@@ -23,8 +21,8 @@ impl Pixel {
             state: PixelState::Stable,
         }
     }
-    pub fn from_pixel_type(pixel_type: PixelType, rng: &RandGenerator) -> Self {
-        let color = pixel_type.to_color_shade(rng);
+    pub fn from_pixel_type(pixel_type: PixelType) -> Self {
+        let color = pixel_type.color();
         Self {
             pixel_type,
             color,

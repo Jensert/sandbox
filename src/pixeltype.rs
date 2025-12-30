@@ -1,4 +1,4 @@
-use macroquad::{color::Color, rand::RandGenerator};
+use macroquad::color::Color;
 
 pub const LAVA: Color = Color::new(0.70, 0.16, 0.22, 1.00);
 pub const STONE: Color = Color::new(0.51, 0.51, 0.51, 1.00);
@@ -46,7 +46,7 @@ impl PixelType {
         let idx = PIXEL_ORDER.iter().position(|p| p == self).unwrap();
         *self = PIXEL_ORDER[(idx + PIXEL_ORDER.len() - 1) % PIXEL_ORDER.len()];
     }
-    pub fn to_str(&self) -> &str {
+    pub fn name_str(&self) -> &str {
         match self {
             PixelType::Air => "Air",
 
@@ -75,7 +75,7 @@ impl PixelType {
     //         },
     //     }
     // }
-    pub fn to_color_shade(&self, rng: &RandGenerator) -> Color {
+    pub fn color(&self) -> Color {
         match self {
             PixelType::Sand => SAND, //Color::new(rng.gen_range(0.7, 0.9), 0.69, 0.51, 1.00), // Beige
             PixelType::Water => WATER, //Color::new(0.00, 0.47, rng.gen_range(0.89, 0.99), 1.00), // Blue
@@ -119,8 +119,8 @@ impl PixelType {
         }
     }
 
-    pub fn to_pixel(&self, rng: &RandGenerator) -> Pixel {
-        Pixel::from_pixel_type(*self, rng)
+    pub fn to_pixel(&self) -> Pixel {
+        Pixel::from_pixel_type(*self)
     }
 
     /// Returns a boolean indicating whether the pixel was correctly updated or not
