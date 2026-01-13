@@ -67,8 +67,10 @@ async fn main() {
 
         // Everything that is drawn after app.stop_drawing() is called is drawn at screen resolution
         // and uses the default camera. This is not drawn to the render target
-        app.chunks().draw_borders(app.render_ratio());
-        app.chunks().draw_stability(app.render_ratio());
+        if app.user_interface().data().debug_enabled {
+            app.chunks().draw_borders(app.render_ratio());
+            app.chunks().draw_stability(app.render_ratio());
+        }
 
         next_frame().await;
     }

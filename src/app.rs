@@ -4,7 +4,7 @@ use macroquad::{prelude::*, rand::RandGenerator};
 
 use crate::{
     FIXED_TIMESTEP, RENDER_SIZE, brush::Brush, mapgenerator::MapGenerator, pixelgrid::ChunkGrid,
-    player::Minion, ui::UserInterface,
+    player::Dwarf, ui::UserInterface,
 };
 
 pub struct App {
@@ -30,7 +30,7 @@ pub struct App {
     map_generator: MapGenerator,
     brush: Brush,
     user_interface: UserInterface,
-    minion: Minion,
+    minion: Dwarf,
 }
 impl App {
     pub async fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
@@ -120,7 +120,7 @@ impl App {
             map_generator,
             brush: Brush::new(),
             user_interface: UserInterface::new(),
-            minion: Minion::new().await,
+            minion: Dwarf::new().await,
         }
     }
 
@@ -146,7 +146,7 @@ impl App {
         &mut self.user_interface
     }
 
-    pub fn player(&self) -> &Minion {
+    pub fn player(&self) -> &Dwarf {
         &self.minion
     }
 

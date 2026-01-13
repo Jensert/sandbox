@@ -6,7 +6,7 @@ use macroquad::{
     texture::{DrawTextureParams, Texture2D, draw_texture_ex, load_texture},
 };
 
-pub struct Minion {
+pub struct Dwarf {
     movement_speed: f32,
     direction: Vec2,
     velocity: Vec2,
@@ -14,7 +14,7 @@ pub struct Minion {
     sprite: Texture2D,
 }
 
-impl Minion {
+impl Dwarf {
     pub async fn new() -> Self {
         Self {
             movement_speed: 1.0,
