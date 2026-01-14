@@ -26,6 +26,8 @@ pub struct App {
     should_quit: bool,
     total_scroll: f32,
 
+    app_mode: AppMode,
+
     chunk_grid: ChunkGrid,
     map_generator: MapGenerator,
     brush: Brush,
@@ -116,6 +118,8 @@ impl App {
             should_quit: false,
             total_scroll: 0.0,
 
+            app_mode: AppMode::Draw,
+
             chunk_grid,
             map_generator,
             brush: Brush::new(),
@@ -174,6 +178,8 @@ impl App {
             &mut self.brush,
             self.mouse_world_position,
             &rng,
+            self.app_mode,
+            self.render_ratio,
         );
     }
 
@@ -413,4 +419,10 @@ impl AppTimer {
             self.accumulator -= FIXED_TIMESTEP;
         }
     }
+}
+
+#[derive(Copy, Clone)]
+pub enum AppMode {
+    Select,
+    Draw,
 }

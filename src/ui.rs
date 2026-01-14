@@ -1,8 +1,11 @@
 use std::fs::read_to_string;
 
+use crate::RENDER_SIZE;
+use crate::app::AppMode;
 use crate::brush::Brush;
 use crate::mapgenerator::MapGenerator;
 use crate::pixelgrid::{ChunkGrid, ChunkPosition};
+use crate::pixeltype::PixelType;
 use macroquad::prelude::*;
 use macroquad::rand::RandGenerator;
 use macroquad::ui::{hash, root_ui, widgets};
@@ -86,7 +89,10 @@ impl UserInterface {
         brush: &mut Brush,
         mouse_world_position: Vec2,
         rng: &RandGenerator,
+        app_mode: AppMode,
+        render_ratio: (f32, f32),
     ) {
+        self.draw_toolbar(app_mode, render_ratio, brush);
         if self.debug_enabled {
             self.draw_debug(chunk_grid, map_generator, brush, mouse_world_position, &rng)
         }
@@ -173,5 +179,48 @@ impl UserInterface {
                 );
                 ui.label(None, format!("Brush size: {}", brush.size()).as_str());
             });
+    }
+
+    pub fn draw_toolbar(&mut self, app_mode: AppMode, render_ratio: (f32, f32), brush: &mut Brush) {
+        match app_mode {
+            AppMode::Draw => {
+                let widget_rectangle_count = PixelType::count() - 1;
+                let widget_size = Vec2::new((RENDER_SIZE.0 as f32 * render_ratio.0) * 0.6, 100.0);
+                let widget_rectangle_size =
+                    Vec2::new(widget_size.x / widget_rectangle_count as f32, widget_size.y);
+                let widget_pos = Vec2::new(
+                    (RENDER_SIZE.0 as f32 * render_ratio.0) / 2.0 - widget_size.x / 2.0,
+                    (RENDER_SIZE.1 as f32 * render_ratio.1) - widget_size.y - (widget_size.y * 0.1),
+                );
+                let mut widget_pixeltype = PixelType::first();
+
+                widgets::Window::new(hash!(), widget_pos, widget_size)
+                    .movable(false)
+                    .ui(&mut *root_ui(), |ui| {
+                        for pixel_count in 0..widget_rectangle_count {
+                            let border_color = if brush.pixel_type() == widget_pixeltype {
+                                BLACK
+                            } else {
+                                WHITE
+                            };
+                            let fill_color = widget_pixeltype.color();
+                            ui.canvas().rect(
+                                Rect::new(
+                                    widget_pos.x
+                                        + ((widget_size.x / widget_rectangle_count as f32)
+                                            * pixel_count as f32),
+                                    widget_pos.y,
+                                    widget_rectangle_size.x - 1.0,
+                                    widget_rectangle_size.y,
+                                ),
+                                border_color,
+                                fill_color,
+                            );
+                            widget_pixeltype.next();
+                        }
+                    });
+            }
+            AppMode::Select => (),
+        }
     }
 }

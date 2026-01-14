@@ -41,6 +41,14 @@ pub enum PixelType {
     Minion,
 }
 impl PixelType {
+    pub fn count() -> u8 {
+        return 9;
+    }
+
+    pub fn first() -> PixelType {
+        *PIXEL_ORDER.first().expect("Expected a PixelType")
+    }
+
     pub fn next(&mut self) {
         let idx = PIXEL_ORDER.iter().position(|p| p == self).unwrap();
         *self = PIXEL_ORDER[(idx + 1) % PIXEL_ORDER.len()];
