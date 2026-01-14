@@ -184,7 +184,7 @@ impl UserInterface {
     pub fn draw_toolbar(&mut self, app_mode: AppMode, render_ratio: (f32, f32), brush: &mut Brush) {
         match app_mode {
             AppMode::Draw => {
-                let widget_rectangle_count = PixelType::count() - 1;
+                let widget_rectangle_count = PixelType::count();
                 let widget_size = Vec2::new((RENDER_SIZE.0 as f32 * render_ratio.0) * 0.6, 100.0);
                 let widget_rectangle_size =
                     Vec2::new(widget_size.x / widget_rectangle_count as f32, widget_size.y);

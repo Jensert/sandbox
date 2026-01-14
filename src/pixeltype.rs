@@ -41,8 +41,8 @@ pub enum PixelType {
     Minion,
 }
 impl PixelType {
-    pub fn count() -> u8 {
-        return 9;
+    pub fn count() -> usize {
+        return PIXEL_ORDER.len();
     }
 
     pub fn first() -> PixelType {
