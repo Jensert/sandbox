@@ -12,9 +12,20 @@
 [x] finish all default layer implementations in MapLayerRule.from_default_layer() function
 [x] Finish shader texture implementation
 [x] Zoom
-[] Add decay mechanic to avoid always falling and chaotic worlds
+[x] Add decay mechanic to avoid always falling and chaotic worlds
     THis should be added by changing the stability of all surrounding pixels whenever 1 pixel is added or removed
-[] Add gameplay
 [x] Move UI logic and drawing to a seperate struct. This struct should be owned by App.
+[] Add Game User Interface and different modes:
+    [] Add a drawing mode
+    [] Add a select mode (used for selecting minions)
+    [] Add a ?Debug Mode?
+    [] Add buttons for the modes:
+        [] Brush size in drawing mode
+        [] Brush Pixel Type in drawing mode
+        [] Select target in selecting mode
+        [] Debug mode should enable all debug drawing
+    [] Add a notification bar / window / popup thing
+        [] WHenever the user changes modes or does an action, show notification with what happened
+[] Add Minion logic
 [] Add way to skip pixels that do not require updating
 [] Implement parallelization

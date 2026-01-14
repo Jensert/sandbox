@@ -479,7 +479,7 @@ impl Chunk {
         for y in 0..CHUNK_SIZE.1 {
             for x in 0..CHUNK_SIZE.0 {
                 if let Some(pixel) = self.get(x as i32, y as i32) {
-                    if let Some(mut movement) = pixel.update_new(self, x as i32, y as i32, rng) {
+                    if let Some(mut movement) = pixel.update(self, x as i32, y as i32, rng) {
                         movement.set_chunk_keys(self.key);
                         changes.push(movement);
                     }

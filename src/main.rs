@@ -7,7 +7,6 @@ mod mapgenerator;
 mod pixel;
 mod pixelgrid;
 mod pixeltype;
-mod player;
 mod ui;
 use app::{App, AppTimer};
 
@@ -59,7 +58,6 @@ async fn main() {
         clear_background(SKYBLUE);
         // Draw the pixel chunks
         app.chunks().draw();
-        app.player().draw();
         // Draw the UI.
         app.draw_ui(&rng);
         // Stop the current draw call

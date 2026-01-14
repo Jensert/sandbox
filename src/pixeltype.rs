@@ -8,6 +8,7 @@ pub const WATER: Color = Color::new(0.00, 0.47, 0.95, 1.00);
 pub const AIR: Color = Color::new(0.40, 0.75, 1.00, 1.00);
 pub const SAND: Color = Color::new(0.83, 0.69, 0.51, 1.00);
 pub const DIRT: Color = Color::new(0.30, 0.25, 0.18, 1.00);
+pub const PURPLE: Color = Color::new(0.78, 0.48, 1.00, 1.00);
 
 use crate::{
     pixel::Pixel,
@@ -22,6 +23,7 @@ const PIXEL_ORDER: &[PixelType] = &[
     PixelType::Stone,
     PixelType::HardStone,
     PixelType::Grass,
+    PixelType::Minion,
 ];
 
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -35,6 +37,8 @@ pub enum PixelType {
     Stone,
     HardStone,
     Grass,
+
+    Minion,
 }
 impl PixelType {
     pub fn next(&mut self) {
@@ -57,6 +61,8 @@ impl PixelType {
             PixelType::Stone => "Stone",
             PixelType::HardStone => "Hard Stone",
             PixelType::Grass => "Grass",
+
+            PixelType::Minion => "Minion",
         }
     }
 
@@ -90,6 +96,7 @@ impl PixelType {
                 b: 0.0,
                 a: 0.0,
             },
+            PixelType::Minion => PURPLE,
         }
     }
 
@@ -103,6 +110,7 @@ impl PixelType {
             PixelType::HardStone => 0.0, //Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Dark Gray
             PixelType::Grass => 0.3, //Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
             PixelType::Air => 0.0,
+            PixelType::Minion => 1.0,
         }
     }
 
@@ -116,6 +124,7 @@ impl PixelType {
             PixelType::HardStone => 0.0, //Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Dark Gray
             PixelType::Grass => 0.18, //Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
             PixelType::Air => 1.0,
+            PixelType::Minion => 1.0,
         }
     }
 
@@ -276,6 +285,7 @@ impl PixelType {
             PixelType::Stone => PixelMatter::Solid,
             PixelType::HardStone => PixelMatter::Solid,
             PixelType::Grass => PixelMatter::Solid,
+            PixelType::Minion => PixelMatter::Minion,
         }
     }
 }
@@ -285,6 +295,7 @@ pub enum PixelMatter {
     Solid,
     Liquid,
     Gas,
+    Minion,
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PixelState {

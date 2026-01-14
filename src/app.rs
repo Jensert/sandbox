@@ -4,7 +4,7 @@ use macroquad::{prelude::*, rand::RandGenerator};
 
 use crate::{
     FIXED_TIMESTEP, RENDER_SIZE, brush::Brush, mapgenerator::MapGenerator, pixelgrid::ChunkGrid,
-    player::Dwarf, ui::UserInterface,
+    pixeltype::PixelType, ui::UserInterface,
 };
 
 pub struct App {
@@ -30,7 +30,7 @@ pub struct App {
     map_generator: MapGenerator,
     brush: Brush,
     user_interface: UserInterface,
-    minion: Dwarf,
+    target: Vec2,
 }
 impl App {
     pub async fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
@@ -120,7 +120,7 @@ impl App {
             map_generator,
             brush: Brush::new(),
             user_interface: UserInterface::new(),
-            minion: Dwarf::new().await,
+            target: Vec2::new(RENDER_SIZE.0 as f32 / 2.0, RENDER_SIZE.1 as f32 / 2.0),
         }
     }
 
@@ -146,8 +146,8 @@ impl App {
         &mut self.user_interface
     }
 
-    pub fn player(&self) -> &Dwarf {
-        &self.minion
+    pub fn target(&self) -> &Vec2 {
+        &self.target
     }
 
     pub fn compile_shader(&mut self, vertex_shader: String, fragment_shader: String) {
@@ -199,6 +199,16 @@ impl App {
         }
         if is_mouse_button_down(MouseButton::Right) {
             self.brush().erase(mouse_world_position, self.chunks_mut());
+        }
+        if is_mouse_button_pressed(MouseButton::Middle) {
+            if let Some(pixel) = self
+                .chunk_grid
+                .get_pixel(mouse_world_position.x as i32, mouse_world_position.y as i32)
+            {
+                if pixel.pixel_type() == PixelType::Minion {
+                    self.target = mouse_world_position
+                }
+            }
         }
 
         // Handle scrolling
@@ -258,8 +268,13 @@ impl App {
     }
 
     fn handle_keyboard_input(&mut self) {
-        if is_key_released(KeyCode::Escape) {
-            self.quit();
+        if is_key_down(KeyCode::LeftShift) {
+            if is_key_pressed(KeyCode::Escape) {
+                self.quit();
+            }
+        }
+        if is_key_pressed(KeyCode::Escape) {
+            self.reset_camera_target();
         }
         if is_key_pressed(KeyCode::R) {
             self.chunk_grid.recalculate_all_stability();
@@ -273,11 +288,24 @@ impl App {
         if is_key_released(KeyCode::LeftControl) {
             self.user_interface.disable_zoom();
         }
+
+        if is_key_pressed(KeyCode::Left) {
+            self.render_camera.target.x -= 1.0;
+        }
     }
 
     pub fn handle_input(&mut self) {
         self.handle_mouse_input();
         self.handle_keyboard_input();
+    }
+
+    pub fn set_camera_target(&mut self, world_position: Vec2) {
+        self.target = world_position;
+    }
+
+    pub fn reset_camera_target(&mut self) {
+        let screen_center = Vec2::new(RENDER_SIZE.0 as f32 / 2.0, RENDER_SIZE.1 as f32 / 2.0);
+        self.target = screen_center;
     }
 
     pub fn start_drawing(&self) {
@@ -351,7 +379,7 @@ impl App {
 
     pub fn update(&mut self, rng: &RandGenerator) {
         self.chunks_mut().update(rng);
-        self.minion.move_player();
+        self.render_camera.target = *self.target();
         let frag = self.user_interface().data().fragment_shader;
         let vert = self.user_interface().data().vertex_shader;
         if self.fragment_texture_shader != frag || self.vertex_shader != vert {

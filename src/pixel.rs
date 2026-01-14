@@ -124,7 +124,7 @@ impl Pixel {
         (self.stability, self.state)
     }
 
-    pub fn update_new(
+    pub fn update(
         &self,
         pixel_grid: &Chunk,
         x: i32,
