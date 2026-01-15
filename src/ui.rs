@@ -204,12 +204,14 @@ impl UserInterface {
                                 WHITE
                             };
                             let fill_color = widget_pixeltype.color();
-                            ui.canvas().rect(
+                            let mut canvas = ui.canvas();
+                            let cursor = canvas.cursor();
+                            canvas.rect(
                                 Rect::new(
-                                    widget_pos.x
+                                    cursor.x
                                         + ((widget_size.x / widget_rectangle_count as f32)
                                             * pixel_count as f32),
-                                    widget_pos.y,
+                                    cursor.y,
                                     widget_rectangle_size.x - 1.0,
                                     widget_rectangle_size.y,
                                 ),
