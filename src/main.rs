@@ -58,17 +58,13 @@ async fn main() {
         clear_background(SKYBLUE);
         // Draw the pixel chunks
         app.chunks().draw();
-        // Draw the UI.
-        app.draw_ui(&rng);
         // Stop the current draw call
         app.stop_drawing();
-
         // Everything that is drawn after app.stop_drawing() is called is drawn at screen resolution
         // and uses the default camera. This is not drawn to the render target
-        if app.user_interface().data().debug_enabled {
-            app.chunks().draw_borders(app.render_ratio());
-            app.chunks().draw_stability(app.render_ratio());
-        }
+        // ALl UI drawing and everything else that requires screen space, instead of world space, goes here
+        // Draw the UI.
+        app.draw_ui(&rng);
 
         next_frame().await;
     }

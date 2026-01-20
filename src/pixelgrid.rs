@@ -38,19 +38,37 @@ impl ChunkPosition {
 // Do not implement copy or clone
 pub struct ChunkGrid {
     grid: HashMap<(i32, i32), Chunk>,
+    image: Image,
+    texture: Texture2D,
 }
 
 impl ChunkGrid {
-    pub fn new(rng: &RandGenerator) -> Self {
+    pub fn new(rng: &RandGenerator, render_ratio: (f32, f32)) -> Self {
         let mut grid = HashMap::new();
         grid.insert((0, 0), Chunk::new(CHUNK_SIZE, rng, (0, 0)));
         grid.insert((0, 1), Chunk::new(CHUNK_SIZE, rng, (0, 1)));
         grid.insert((1, 0), Chunk::new(CHUNK_SIZE, rng, (1, 0)));
         grid.insert((1, 1), Chunk::new(CHUNK_SIZE, rng, (1, 1)));
-        Self { grid }
+
+        let image = Image::gen_image_color(
+            (RENDER_SIZE.0 as f32 * render_ratio.0) as u16,
+            (RENDER_SIZE.1 as f32 * render_ratio.1) as u16,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+        );
+        let texture = Texture2D::from_image(&image);
+        Self {
+            grid,
+            image,
+            texture,
+        }
     }
 
-    pub fn update(&mut self, rng: &RandGenerator) {
+    pub fn update(&mut self, rng: &RandGenerator, render_ratio: (f32, f32)) {
         // Updating should be multiple stages:
         // First: get all movements for each chunk
         // Second: apply all movements
@@ -107,12 +125,6 @@ impl ChunkGrid {
         &mut self.grid
     }
 
-    pub fn _update_all_textures(&mut self) {
-        for ((_, _), chunk) in self.grid.iter_mut() {
-            chunk.update_textures();
-        }
-    }
-
     pub fn clear(&mut self) {
         for ((_x, _y), chunk) in self.grid.iter_mut() {
             chunk.clear();
@@ -129,7 +141,7 @@ impl ChunkGrid {
 
     pub fn draw(&self) {
         for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
-            chunk.draw(*chunk_key_x, *chunk_key_y);
+            chunk.draw_texture(*chunk_key_x, *chunk_key_y);
         }
     }
 
@@ -138,10 +150,46 @@ impl ChunkGrid {
             chunk.draw_border(*chunk_key_x, *chunk_key_y, render_ratio);
         }
     }
-    pub fn draw_stability(&self, render_ratio: (f32, f32)) {
+
+    pub fn draw_stability_to_texture(&mut self, render_ratio: (f32, f32)) {
         for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
-            chunk.draw_stability(*chunk_key_x, *chunk_key_y, render_ratio);
+            let chunk_world_x = *chunk_key_x as f32 * CHUNK_SIZE.0 as f32;
+            let chunk_world_y = *chunk_key_y as f32 * CHUNK_SIZE.1 as f32;
+
+            for y in 0..CHUNK_SIZE.1 {
+                for x in 0..CHUNK_SIZE.0 {
+                    if let Some(pixel) = chunk.get(x as i32, y as i32) {
+                        if pixel.pixel_type() == PixelType::Air {
+                            continue;
+                        }
+                        let color =
+                            Color::new(1.0 - pixel.stability(), pixel.stability(), 0.0, 1.0);
+                        let screen_x = (chunk_world_x + x as f32) * render_ratio.0;
+                        let screen_y = (chunk_world_y + y as f32) * render_ratio.1;
+                        self.image
+                            .set_pixel(screen_x as u32, screen_y as u32, color);
+                    }
+                }
+            }
         }
+        self.texture = Texture2D::from_image(&self.image);
+    }
+
+    pub fn draw_texture(&self, render_ratio: (f32, f32)) {
+        draw_texture_ex(
+            &self.texture,
+            0.0,
+            0.0,
+            WHITE,
+            DrawTextureParams {
+                dest_size: None,
+                source: None,
+                rotation: 0.0,
+                flip_x: false,
+                flip_y: false,
+                pivot: None,
+            },
+        );
     }
 
     /// Set pixel to a position based on world_position
@@ -312,6 +360,7 @@ impl ChunkGrid {
             GridQuery::OutOfBounds
         }
     }
+
     pub fn query_world_with_chunk_key(
         &self,
         chunk_key: (i32, i32),
@@ -426,7 +475,7 @@ pub struct Chunk {
     chunk: Vec<Pixel>,
     last_updates: HashMap<(i32, i32), Pixel>,
 
-    texture_main: Texture2D,
+    texture: Texture2D,
 
     updated_last_frame: bool,
 }
@@ -446,10 +495,8 @@ impl Chunk {
             },
         );
 
-        let main_texture = Texture2D::from_image(&image);
-        let shader_texture = main_texture.clone();
-        main_texture.set_filter(FilterMode::Nearest);
-        shader_texture.set_filter(FilterMode::Linear);
+        let texture = Texture2D::from_image(&image);
+        texture.set_filter(FilterMode::Nearest);
 
         Self {
             width: size.0 as i32,
@@ -458,7 +505,7 @@ impl Chunk {
             chunk,
             last_updates,
 
-            texture_main: main_texture,
+            texture,
 
             updated_last_frame: false,
         }
@@ -497,10 +544,10 @@ impl Chunk {
     /// Should probably only be called if there is a change in the chunk,
     /// but this is fine for now
     pub fn update_textures(&mut self) {
-        self.update_main_teture();
+        self.update_texture();
     }
 
-    pub fn update_main_teture(&mut self) {
+    pub fn update_texture(&mut self) {
         let mut image = Image::gen_image_color(
             CHUNK_SIZE.0 as u16,
             CHUNK_SIZE.1 as u16,
@@ -521,17 +568,17 @@ impl Chunk {
             }
         }
 
-        self.texture_main.update(&image);
+        self.texture.update(&image);
     }
 
     /// Draw the chunk's texture to the screen in the appropriate coordinates
     /// The chunk key are transformed to screen coordinates
-    pub fn draw(&self, chunk_key_x: i32, chunk_key_y: i32) {
+    pub fn draw_texture(&self, chunk_key_x: i32, chunk_key_y: i32) {
         let chunk_x = chunk_key_x * CHUNK_SIZE.0 as i32;
         let chunk_y = chunk_key_y * CHUNK_SIZE.1 as i32;
 
         draw_texture_ex(
-            &self.texture_main,
+            &self.texture,
             chunk_x as f32,
             chunk_y as f32,
             WHITE,

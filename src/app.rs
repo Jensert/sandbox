@@ -36,7 +36,7 @@ pub struct App {
 }
 impl App {
     pub async fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
-        let mut chunk_grid = ChunkGrid::new(rng);
+        let mut chunk_grid = ChunkGrid::new(rng, render_ratio);
         let map_generator = MapGenerator::default();
         map_generator.generate_map(&mut chunk_grid, rng);
 
@@ -181,6 +181,10 @@ impl App {
             self.app_mode,
             self.render_ratio,
         );
+        if self.user_interface().data().debug_enabled {
+            self.chunks().draw_borders(self.render_ratio());
+            self.chunks().draw_texture(self.render_ratio);
+        }
     }
 
     pub fn render_ratio(&self) -> (f32, f32) {
@@ -277,6 +281,10 @@ impl App {
         if is_key_down(KeyCode::LeftShift) {
             if is_key_pressed(KeyCode::Escape) {
                 self.quit();
+            }
+            if is_key_pressed(KeyCode::S) {
+                let ratio = self.render_ratio().clone();
+                self.chunks_mut().draw_stability_to_texture(ratio);
             }
         }
         if is_key_pressed(KeyCode::Escape) {
@@ -384,7 +392,8 @@ impl App {
     }
 
     pub fn update(&mut self, rng: &RandGenerator) {
-        self.chunks_mut().update(rng);
+        let ratio = self.render_ratio.clone();
+        self.chunks_mut().update(rng, ratio);
         self.render_camera.target = *self.target();
         let frag = self.user_interface().data().fragment_shader;
         let vert = self.user_interface().data().vertex_shader;
