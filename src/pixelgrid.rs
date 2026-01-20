@@ -175,7 +175,7 @@ impl ChunkGrid {
         self.texture = Texture2D::from_image(&self.image);
     }
 
-    pub fn draw_texture(&self, render_ratio: (f32, f32)) {
+    pub fn draw_texture(&self) {
         draw_texture_ex(
             &self.texture,
             0.0,
@@ -475,6 +475,7 @@ pub struct Chunk {
     chunk: Vec<Pixel>,
     last_updates: HashMap<(i32, i32), Pixel>,
 
+    image: Image,
     texture: Texture2D,
 
     updated_last_frame: bool,
@@ -505,6 +506,7 @@ impl Chunk {
             chunk,
             last_updates,
 
+            image,
             texture,
 
             updated_last_frame: false,
@@ -548,27 +550,16 @@ impl Chunk {
     }
 
     pub fn update_texture(&mut self) {
-        let mut image = Image::gen_image_color(
-            CHUNK_SIZE.0 as u16,
-            CHUNK_SIZE.1 as u16,
-            Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.0,
-            },
-        );
-
         for y in 0..CHUNK_SIZE.1 {
             for x in 0..CHUNK_SIZE.0 {
                 if let Some(pixel) = self.get(x as i32, y as i32) {
                     let color = pixel.color();
-                    image.set_pixel(x as u32, y as u32, color);
+                    self.image.set_pixel(x as u32, y as u32, color);
                 }
             }
         }
 
-        self.texture.update(&image);
+        self.texture.update(&self.image);
     }
 
     /// Draw the chunk's texture to the screen in the appropriate coordinates

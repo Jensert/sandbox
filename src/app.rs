@@ -183,7 +183,7 @@ impl App {
         );
         if self.user_interface().data().debug_enabled {
             self.chunks().draw_borders(self.render_ratio());
-            self.chunks().draw_texture(self.render_ratio);
+            self.chunks().draw_texture();
         }
     }
 
