@@ -1,7 +1,6 @@
 use std::fs::read_to_string;
 
 use crate::RENDER_SIZE;
-use crate::app::AppMode;
 use crate::brush::Brush;
 use crate::mapgenerator::MapGenerator;
 use crate::pixelgrid::{ChunkGrid, ChunkPosition};
@@ -16,14 +15,7 @@ pub struct UserInterface {
     fragment_shader: String,
     zoom_enabled: bool,
     zoom: f32,
-}
-pub struct UserInterfaceData {
-    pub debug_enabled: bool,
-    pub shader_enabled: bool,
-    pub vertex_shader: String,
-    pub fragment_shader: String,
-    pub zoom_enabled: bool,
-    pub zoom: f32,
+    draw_mode: UiMode,
 }
 
 impl UserInterface {
@@ -37,7 +29,32 @@ impl UserInterface {
                 .expect("expected a fragment glsl shader"),
             zoom_enabled: false,
             zoom: 7.0,
+            draw_mode: UiMode::Draw,
         }
+    }
+
+    pub fn fragment_shader(&self) -> String {
+        self.fragment_shader.clone()
+    }
+
+    pub fn vertex_shader(&self) -> String {
+        self.vertex_shader.clone()
+    }
+
+    pub fn zoom_enabled(&self) -> bool {
+        self.zoom_enabled
+    }
+
+    pub fn shader_enabled(&self) -> bool {
+        self.shader_enabled
+    }
+
+    pub fn zoom(&self) -> f32 {
+        self.zoom
+    }
+
+    pub fn debug_enabled(&self) -> bool {
+        self.debug_enabled
     }
 
     pub fn toggle_debug(&mut self) {
@@ -54,17 +71,6 @@ impl UserInterface {
             read_to_string("src/shaders/texture.frag").expect("expected a fragment glsl shader");
         self.vertex_shader =
             read_to_string("src/shaders/vertex.glsl").expect("expected a vertex glsl shader");
-    }
-
-    pub fn data(&self) -> UserInterfaceData {
-        UserInterfaceData {
-            debug_enabled: self.debug_enabled,
-            shader_enabled: self.shader_enabled,
-            vertex_shader: self.vertex_shader.clone(),
-            fragment_shader: self.fragment_shader.clone(),
-            zoom_enabled: self.zoom_enabled,
-            zoom: self.zoom.clone(),
-        }
     }
 
     pub fn enable_zoom(&mut self) {
@@ -89,10 +95,9 @@ impl UserInterface {
         brush: &mut Brush,
         mouse_world_position: Vec2,
         rng: &RandGenerator,
-        app_mode: AppMode,
         render_ratio: (f32, f32),
     ) {
-        self.draw_toolbar(app_mode, render_ratio, brush);
+        self.draw_toolbar(self.draw_mode, render_ratio, brush);
         if self.debug_enabled {
             self.draw_debug(chunk_grid, map_generator, brush, mouse_world_position, &rng)
         }
@@ -181,9 +186,9 @@ impl UserInterface {
             });
     }
 
-    pub fn draw_toolbar(&mut self, app_mode: AppMode, render_ratio: (f32, f32), brush: &mut Brush) {
+    pub fn draw_toolbar(&mut self, app_mode: UiMode, render_ratio: (f32, f32), brush: &mut Brush) {
         match app_mode {
-            AppMode::Draw => {
+            UiMode::Draw => {
                 let widget_rectangle_count = PixelType::count();
                 let widget_size = Vec2::new((RENDER_SIZE.0 as f32 * render_ratio.0) * 0.6, 100.0);
                 let widget_rectangle_size =
@@ -222,7 +227,12 @@ impl UserInterface {
                         }
                     });
             }
-            AppMode::Select => (),
+            UiMode::Select => (),
         }
     }
+}
+#[derive(Copy, Clone)]
+pub enum UiMode {
+    Select,
+    Draw,
 }

@@ -3,8 +3,12 @@ use std::fs::read_to_string;
 use macroquad::{prelude::*, rand::RandGenerator};
 
 use crate::{
-    FIXED_TIMESTEP, RENDER_SIZE, brush::Brush, mapgenerator::MapGenerator, pixelgrid::ChunkGrid,
-    pixeltype::PixelType, ui::UserInterface,
+    FIXED_TIMESTEP, RENDER_SIZE,
+    brush::Brush,
+    mapgenerator::MapGenerator,
+    pixelgrid::ChunkGrid,
+    pixeltype::PixelType,
+    ui::{UiMode, UserInterface},
 };
 
 pub struct App {
@@ -25,8 +29,6 @@ pub struct App {
     mouse_world_position: Vec2,
     should_quit: bool,
     total_scroll: f32,
-
-    app_mode: AppMode,
 
     chunk_grid: ChunkGrid,
     map_generator: MapGenerator,
@@ -118,8 +120,6 @@ impl App {
             should_quit: false,
             total_scroll: 0.0,
 
-            app_mode: AppMode::Draw,
-
             chunk_grid,
             map_generator,
             brush: Brush::new(),
@@ -178,10 +178,9 @@ impl App {
             &mut self.brush,
             self.mouse_world_position,
             &rng,
-            self.app_mode,
             self.render_ratio,
         );
-        if self.user_interface().data().debug_enabled {
+        if self.user_interface().debug_enabled() {
             self.chunks().draw_borders(self.render_ratio());
             let ratio = self.render_ratio;
             self.chunks_mut().draw_stability_to_texture(ratio);
@@ -348,18 +347,18 @@ impl App {
         );
 
         self.zoom_material
-            .set_uniform("Zoom", self.user_interface().data().zoom);
+            .set_uniform("Zoom", self.user_interface().zoom());
         self.zoom_material
             .set_uniform("MousePosition", self.mouse_world_position);
 
-        if self.user_interface().data().shader_enabled {
+        if self.user_interface().shader_enabled() {
             // Apply texture shader
             gl_use_material(&self.texture_material);
             draw_rectangle(0.0, texture_vec.y, texture_vec.x, -texture_vec.y, WHITE);
             gl_use_default_material();
 
             // Apply zoom shader
-            if self.user_interface().data().zoom_enabled {
+            if self.user_interface().zoom_enabled() {
                 // Calculate zoom texture position and size
                 let zoom_texture_size = vec2(screen_width() / 7.0, -screen_height() / 7.0);
                 let zoom_texture_position = vec2(
@@ -397,8 +396,8 @@ impl App {
         let ratio = self.render_ratio.clone();
         self.chunks_mut().update(rng, ratio);
         self.render_camera.target = *self.target();
-        let frag = self.user_interface().data().fragment_shader;
-        let vert = self.user_interface().data().vertex_shader;
+        let frag = self.user_interface().fragment_shader();
+        let vert = self.user_interface().vertex_shader();
         if self.fragment_texture_shader != frag || self.vertex_shader != vert {
             self.compile_shader(vert, frag);
         }
@@ -430,10 +429,4 @@ impl AppTimer {
             self.accumulator -= FIXED_TIMESTEP;
         }
     }
-}
-
-#[derive(Copy, Clone)]
-pub enum AppMode {
-    Select,
-    Draw,
 }

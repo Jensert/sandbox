@@ -45,7 +45,6 @@ async fn main() {
     println!("Started app with seed: {seed}");
     // Create pixelgrid with the seed
     while app.running() {
-        let _shader_strength = app.user_interface().data().shader_enabled;
         // Get user input
         app.handle_input();
 
