@@ -26,7 +26,7 @@ pub struct UserInterface {
 impl UserInterface {
     pub fn new() -> Self {
         Self {
-            debug_overlay_enabled: true,
+            debug_overlay_enabled: false,
             shader_enabled: false,
             vertex_shader: read_to_string("src/shaders/vertex.glsl")
                 .expect("expected a vertex glsl shader"),
@@ -71,6 +71,10 @@ impl UserInterface {
 
     pub fn switch_ui_mode(&mut self) {
         self.ui_mode.next()
+    }
+
+    pub fn target_pixel(&self) -> Option<Pixel> {
+        self.target_pixel
     }
 
     pub fn set_target_pixel(&mut self, target_pixel: Pixel) {
@@ -133,9 +137,11 @@ impl UserInterface {
         rng: &RandGenerator,
         render_ratio: (f32, f32),
     ) {
-        self.draw_toolbar(self.ui_mode, render_ratio, brush);
+        self.draw_toolbar(render_ratio, brush);
         if self.debug_overlay_enabled {
             self.draw_debug(chunk_grid, map_generator, brush, mouse_world_position, &rng)
+        } else {
+            self.draw_info(brush);
         }
     }
 
@@ -222,8 +228,8 @@ impl UserInterface {
             });
     }
 
-    pub fn draw_toolbar(&mut self, app_mode: UiMode, render_ratio: (f32, f32), brush: &mut Brush) {
-        match app_mode {
+    pub fn draw_toolbar(&mut self, render_ratio: (f32, f32), brush: &mut Brush) {
+        match self.ui_mode {
             UiMode::Draw => {
                 let widget_rectangle_count = PixelType::count();
                 let widget_size = Vec2::new((RENDER_SIZE.0 as f32 * render_ratio.0) * 0.6, 100.0);
@@ -237,6 +243,7 @@ impl UserInterface {
 
                 widgets::Window::new(hash!(), widget_pos, widget_size)
                     .movable(false)
+                    .titlebar(false)
                     .ui(&mut *root_ui(), |ui| {
                         for pixel_count in 0..widget_rectangle_count {
                             let border_color = if brush.pixel_type() == widget_pixeltype {
@@ -264,6 +271,56 @@ impl UserInterface {
                     });
             }
             UiMode::Select => (),
+        }
+    }
+    pub fn draw_info(&mut self, brush: &mut Brush) {
+        match self.ui_mode {
+            UiMode::Draw => {
+                widgets::Window::new(hash!(), vec2(0.0, 0.0), vec2(200.0, 150.0))
+                    .label("Draw information")
+                    .movable(true)
+                    .titlebar(false)
+                    .ui(&mut *root_ui(), |ui| {
+                        // Brush information
+                        ui.separator();
+
+                        ui.label(
+                            None,
+                            format!("Selected pixel: {}", brush.pixel_type().name_str()).as_str(),
+                        );
+                        ui.label(
+                            None,
+                            format!("Selected brush type: {}", brush.brush_type().as_str())
+                                .as_str(),
+                        );
+                        ui.label(None, format!("Brush size: {}", brush.size()).as_str());
+                    });
+            }
+
+            UiMode::Select => {
+                widgets::Window::new(hash!(), vec2(0.0, 0.0), vec2(200.0, 150.0))
+                    .label("Select information")
+                    .movable(true)
+                    .titlebar(false)
+                    .ui(&mut *root_ui(), |ui| {
+                        // Brush information
+                        ui.separator();
+
+                        if let Some(pixel) = self.target_pixel() {
+                            ui.label(
+                                None,
+                                format!("Targeted pixel: {}", pixel.pixel_type().name_str())
+                                    .as_str(),
+                            );
+                        } else {
+                            ui.label(None, format!("Targeted pixel: {}", "None").as_str());
+                        }
+                        ui.label(
+                            None,
+                            format!("Targeted position: {}", self.target_position()).as_str(),
+                        );
+                    });
+            }
         }
     }
 }

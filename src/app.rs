@@ -219,8 +219,8 @@ impl App {
                 .get_pixel(mouse_world_position.x as i32, mouse_world_position.y as i32)
             {
                 if pixel.pixel_type() == PixelType::Minion {
-                    self.user_interface_mut()
-                        .set_target_position(mouse_world_position);
+                    let ui = self.user_interface_mut();
+                    ui.set_target_position(mouse_world_position);
                 }
             }
         }
