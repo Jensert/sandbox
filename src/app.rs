@@ -34,7 +34,6 @@ pub struct App {
     map_generator: MapGenerator,
     brush: Brush,
     user_interface: UserInterface,
-    target: Vec2,
 }
 impl App {
     pub async fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
@@ -124,7 +123,6 @@ impl App {
             map_generator,
             brush: Brush::new(),
             user_interface: UserInterface::new(),
-            target: Vec2::new(RENDER_SIZE.0 as f32 / 2.0, RENDER_SIZE.1 as f32 / 2.0),
         }
     }
 
@@ -150,8 +148,8 @@ impl App {
         &mut self.user_interface
     }
 
-    pub fn target(&self) -> &Vec2 {
-        &self.target
+    pub fn target(&self) -> Vec2 {
+        self.user_interface().target_position()
     }
 
     pub fn compile_shader(&mut self, vertex_shader: String, fragment_shader: String) {
@@ -206,10 +204,14 @@ impl App {
 
         let mouse_world_position = self.mouse_world_position;
         if is_mouse_button_down(MouseButton::Left) {
-            self.brush().draw(mouse_world_position, self.chunks_mut());
+            if self.user_interface.ui_mode() == UiMode::Draw {
+                self.brush().draw(mouse_world_position, self.chunks_mut());
+            }
         }
         if is_mouse_button_down(MouseButton::Right) {
-            self.brush().erase(mouse_world_position, self.chunks_mut());
+            if self.user_interface.ui_mode() == UiMode::Draw {
+                self.brush().erase(mouse_world_position, self.chunks_mut());
+            }
         }
         if is_mouse_button_pressed(MouseButton::Middle) {
             if let Some(pixel) = self
@@ -217,7 +219,8 @@ impl App {
                 .get_pixel(mouse_world_position.x as i32, mouse_world_position.y as i32)
             {
                 if pixel.pixel_type() == PixelType::Minion {
-                    self.target = mouse_world_position
+                    self.user_interface_mut()
+                        .set_target_position(mouse_world_position);
                 }
             }
         }
@@ -294,6 +297,9 @@ impl App {
         if is_key_pressed(KeyCode::R) {
             self.chunk_grid.recalculate_all_stability();
         }
+        if is_key_pressed(KeyCode::D) {
+            self.user_interface_mut().switch_ui_mode();
+        }
         if is_key_pressed(KeyCode::GraveAccent) {
             self.user_interface.toggle_debug();
         }
@@ -315,12 +321,13 @@ impl App {
     }
 
     pub fn set_camera_target(&mut self, world_position: Vec2) {
-        self.target = world_position;
+        self.user_interface_mut()
+            .set_target_position(world_position);
     }
 
     pub fn reset_camera_target(&mut self) {
         let screen_center = Vec2::new(RENDER_SIZE.0 as f32 / 2.0, RENDER_SIZE.1 as f32 / 2.0);
-        self.target = screen_center;
+        self.user_interface_mut().set_target_position(screen_center);
     }
 
     pub fn start_drawing(&self) {
@@ -395,7 +402,7 @@ impl App {
     pub fn update(&mut self, rng: &RandGenerator) {
         let ratio = self.render_ratio.clone();
         self.chunks_mut().update(rng, ratio);
-        self.render_camera.target = *self.target();
+        self.render_camera.target = self.user_interface.target_position();
         let frag = self.user_interface().fragment_shader();
         let vert = self.user_interface().vertex_shader();
         if self.fragment_texture_shader != frag || self.vertex_shader != vert {

@@ -3,25 +3,30 @@ use std::fs::read_to_string;
 use crate::RENDER_SIZE;
 use crate::brush::Brush;
 use crate::mapgenerator::MapGenerator;
+use crate::pixel::Pixel;
 use crate::pixelgrid::{ChunkGrid, ChunkPosition};
 use crate::pixeltype::PixelType;
 use macroquad::prelude::*;
 use macroquad::rand::RandGenerator;
 use macroquad::ui::{hash, root_ui, widgets};
 pub struct UserInterface {
-    debug_enabled: bool,
+    debug_overlay_enabled: bool,
     shader_enabled: bool,
     vertex_shader: String,
     fragment_shader: String,
     zoom_enabled: bool,
     zoom: f32,
-    draw_mode: UiMode,
+    ui_mode: UiMode,
+
+    // actual gameplay parameters
+    target_pixel: Option<Pixel>,
+    target_position: Vec2,
 }
 
 impl UserInterface {
     pub fn new() -> Self {
         Self {
-            debug_enabled: true,
+            debug_overlay_enabled: true,
             shader_enabled: false,
             vertex_shader: read_to_string("src/shaders/vertex.glsl")
                 .expect("expected a vertex glsl shader"),
@@ -29,7 +34,10 @@ impl UserInterface {
                 .expect("expected a fragment glsl shader"),
             zoom_enabled: false,
             zoom: 7.0,
-            draw_mode: UiMode::Draw,
+            ui_mode: UiMode::Select,
+
+            target_pixel: None,
+            target_position: Vec2::new(RENDER_SIZE.0 as f32 / 2.0, RENDER_SIZE.1 as f32 / 2.0),
         }
     }
 
@@ -54,11 +62,39 @@ impl UserInterface {
     }
 
     pub fn debug_enabled(&self) -> bool {
-        self.debug_enabled
+        self.debug_overlay_enabled
+    }
+
+    pub fn ui_mode(&self) -> UiMode {
+        self.ui_mode
+    }
+
+    pub fn switch_ui_mode(&mut self) {
+        self.ui_mode.next()
+    }
+
+    pub fn set_target_pixel(&mut self, target_pixel: Pixel) {
+        self.target_pixel = Some(target_pixel)
+    }
+
+    pub fn clear_target_pixel(&mut self) {
+        self.target_pixel = None
+    }
+
+    pub fn target_position(&self) -> Vec2 {
+        self.target_position
+    }
+
+    pub fn set_target_position(&mut self, position: Vec2) {
+        self.target_position = position
+    }
+
+    pub fn reset_target_position(&mut self) {
+        self.target_position = Vec2::new(RENDER_SIZE.0 as f32 / 2.0, RENDER_SIZE.1 as f32 / 2.0);
     }
 
     pub fn toggle_debug(&mut self) {
-        self.debug_enabled = !self.debug_enabled;
+        self.debug_overlay_enabled = !self.debug_overlay_enabled;
     }
 
     pub fn toggle_shader(&mut self) {
@@ -97,8 +133,8 @@ impl UserInterface {
         rng: &RandGenerator,
         render_ratio: (f32, f32),
     ) {
-        self.draw_toolbar(self.draw_mode, render_ratio, brush);
-        if self.debug_enabled {
+        self.draw_toolbar(self.ui_mode, render_ratio, brush);
+        if self.debug_overlay_enabled {
             self.draw_debug(chunk_grid, map_generator, brush, mouse_world_position, &rng)
         }
     }
@@ -231,8 +267,20 @@ impl UserInterface {
         }
     }
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum UiMode {
     Select,
     Draw,
 }
+impl UiMode {
+    pub fn next(&mut self) {
+        let idx = UI_MODE_ORDER.iter().position(|p| p == self).unwrap();
+        *self = UI_MODE_ORDER[(idx + 1) % UI_MODE_ORDER.len()];
+    }
+
+    pub fn previous(&mut self) {
+        let idx = UI_MODE_ORDER.iter().position(|p| p == self).unwrap();
+        *self = UI_MODE_ORDER[(idx + UI_MODE_ORDER.len() - 1) % UI_MODE_ORDER.len()];
+    }
+}
+const UI_MODE_ORDER: &[UiMode] = &[UiMode::Select, UiMode::Draw];
