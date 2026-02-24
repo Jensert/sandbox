@@ -5,13 +5,13 @@ use macroquad::{prelude::*, rand::RandGenerator};
 use crate::{
     FIXED_TIMESTEP, RENDER_SIZE,
     brush::Brush,
-    mapgenerator::MapGenerator,
     pixelgrid::ChunkGrid,
     pixeltype::PixelType,
     ui::{UiMode, UserInterface},
 };
 
 pub struct App {
+    seed: u64,
     render_ratio: (f32, f32),
     render_target: RenderTarget,
 
@@ -31,15 +31,12 @@ pub struct App {
     total_scroll: f32,
 
     chunk_grid: ChunkGrid,
-    map_generator: MapGenerator,
     brush: Brush,
     user_interface: UserInterface,
 }
 impl App {
-    pub async fn new(render_ratio: (f32, f32), rng: &RandGenerator) -> Self {
-        let mut chunk_grid = ChunkGrid::new(rng, render_ratio);
-        let map_generator = MapGenerator::default();
-        map_generator.generate_map(&mut chunk_grid, rng);
+    pub async fn new(render_ratio: (f32, f32), seed: u64) -> Self {
+        let mut chunk_grid = ChunkGrid::new(render_ratio, seed);
 
         println!("Loading shaders");
         let vertex_shader =
@@ -99,6 +96,7 @@ impl App {
         });
 
         Self {
+            seed,
             render_ratio,
 
             render_target,
@@ -120,7 +118,6 @@ impl App {
             total_scroll: 0.0,
 
             chunk_grid,
-            map_generator,
             brush: Brush::new(),
             user_interface: UserInterface::new(),
         }
@@ -169,14 +166,13 @@ impl App {
         self.texture_material = shader;
     }
 
-    pub fn draw_ui(&mut self, rng: &RandGenerator) {
+    pub fn draw_ui(&mut self) {
         self.user_interface.draw(
             &mut self.chunk_grid,
-            &self.map_generator,
             &mut self.brush,
             self.mouse_world_position,
-            &rng,
             self.render_ratio,
+            self.seed,
         );
         if self.user_interface().debug_enabled() {
             self.chunks().draw_borders(self.render_ratio());
@@ -294,7 +290,7 @@ impl App {
         if is_key_pressed(KeyCode::Escape) {
             self.reset_camera_target();
         }
-        if is_key_pressed(KeyCode::R) {
+        if is_key_down(KeyCode::R) {
             self.chunk_grid.recalculate_all_stability();
         }
         if is_key_pressed(KeyCode::D) {

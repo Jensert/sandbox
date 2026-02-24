@@ -2,12 +2,10 @@ use std::fs::read_to_string;
 
 use crate::RENDER_SIZE;
 use crate::brush::Brush;
-use crate::mapgenerator::MapGenerator;
 use crate::pixel::Pixel;
 use crate::pixelgrid::{ChunkGrid, ChunkPosition};
 use crate::pixeltype::PixelType;
 use macroquad::prelude::*;
-use macroquad::rand::RandGenerator;
 use macroquad::ui::{hash, root_ui, widgets};
 pub struct UserInterface {
     debug_overlay_enabled: bool,
@@ -131,15 +129,14 @@ impl UserInterface {
     pub fn draw(
         &mut self,
         chunk_grid: &mut ChunkGrid,
-        map_generator: &MapGenerator,
         brush: &mut Brush,
         mouse_world_position: Vec2,
-        rng: &RandGenerator,
         render_ratio: (f32, f32),
+        seed: u64,
     ) {
         self.draw_toolbar(render_ratio, brush);
         if self.debug_overlay_enabled {
-            self.draw_debug(chunk_grid, map_generator, brush, mouse_world_position, &rng)
+            self.draw_debug(chunk_grid, brush, mouse_world_position, seed)
         } else {
             self.draw_info(brush);
         }
@@ -150,10 +147,9 @@ impl UserInterface {
     fn draw_debug(
         &mut self,
         chunk_grid: &mut ChunkGrid,
-        map_generator: &MapGenerator,
         brush: &mut Brush,
         mouse_world_position: Vec2,
-        rng: &RandGenerator,
+        seed: u64,
     ) {
         widgets::Window::new(hash!(), vec2(0.0, 0.0), vec2(300.0, 300.0))
             .label("Debug window")
@@ -192,11 +188,11 @@ impl UserInterface {
                 // ChunkGrid functions
                 ui.separator();
 
-                if ui.button(None, "Reset pixelgrid") {
+                if ui.button(None, "Empty pixelgrid") {
                     chunk_grid.clear();
                 }
-                if ui.button(None, "Generate map") {
-                    map_generator.generate_map(chunk_grid, rng);
+                if ui.button(None, "Regenerate pixelgrid") {
+                    chunk_grid.generate_chunks(seed);
                 }
 
                 // Shader functions

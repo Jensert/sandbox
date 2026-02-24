@@ -1,5 +1,5 @@
 use crate::{
-    CHUNK_SIZE, RENDER_SIZE,
+    CHUNK_SIZE, RENDER_SIZE, noise,
     pixel::Pixel,
     pixeltype::{PixelMatter, PixelState, PixelType},
 };
@@ -43,12 +43,12 @@ pub struct ChunkGrid {
 }
 
 impl ChunkGrid {
-    pub fn new(rng: &RandGenerator, render_ratio: (f32, f32)) -> Self {
+    pub fn new(render_ratio: (f32, f32), seed: u64) -> Self {
         let mut grid = HashMap::new();
-        grid.insert((0, 0), Chunk::new(CHUNK_SIZE, rng, (0, 0)));
-        grid.insert((0, 1), Chunk::new(CHUNK_SIZE, rng, (0, 1)));
-        grid.insert((1, 0), Chunk::new(CHUNK_SIZE, rng, (1, 0)));
-        grid.insert((1, 1), Chunk::new(CHUNK_SIZE, rng, (1, 1)));
+        grid.insert((0, 0), Chunk::new(CHUNK_SIZE, seed, (0, 0)));
+        grid.insert((0, 1), Chunk::new(CHUNK_SIZE, seed, (0, 1)));
+        grid.insert((1, 0), Chunk::new(CHUNK_SIZE, seed, (1, 0)));
+        grid.insert((1, 1), Chunk::new(CHUNK_SIZE, seed, (1, 1)));
 
         let image = Image::gen_image_color(
             (RENDER_SIZE.0 as f32 * render_ratio.0) as u16,
@@ -128,6 +128,17 @@ impl ChunkGrid {
     pub fn clear(&mut self) {
         for ((_x, _y), chunk) in self.grid.iter_mut() {
             chunk.clear();
+        }
+    }
+
+    pub fn generate_chunks(&mut self, seed: u64) {
+        let mut keys = vec![];
+        for (x, y) in self.grid.keys() {
+            keys.push((*x, *y));
+        }
+        for (x, y) in keys {
+            self.grid_mut()
+                .insert((x, y), Chunk::new(CHUNK_SIZE, seed, (x, y)));
         }
     }
 
@@ -481,7 +492,7 @@ pub struct Chunk {
     updated_last_frame: bool,
 }
 impl Chunk {
-    pub fn new(size: (usize, usize), _rng: &RandGenerator, key: (i32, i32)) -> Self {
+    pub fn empty(size: (usize, usize), _rng: &RandGenerator, key: (i32, i32)) -> Self {
         let chunk = vec![Pixel::empty(); CHUNK_SIZE.0 as usize * CHUNK_SIZE.1 as usize];
         let last_updates = HashMap::new();
 
@@ -509,7 +520,58 @@ impl Chunk {
             image,
             texture,
 
-            updated_last_frame: false,
+            updated_last_frame: true,
+        }
+    }
+
+    pub fn new(size: (usize, usize), seed: u64, chunk_key: (i32, i32)) -> Self {
+        let mut chunk = vec![];
+        let last_updates = HashMap::new();
+
+        let chunk_size = (CHUNK_SIZE.0 as i32, CHUNK_SIZE.1 as i32);
+
+        for y in 0..chunk_size.1 {
+            for x in 0..chunk_size.0 {
+                let world_x = chunk_key.0 * chunk_size.0 + x;
+                let world_y = chunk_key.1 * chunk_size.1 + y;
+
+                let hash =
+                    noise::noise2D(world_x as f32 * 0.05, world_y as f32 * 0.05, seed as i32);
+                let pixel_type = if hash < 0.2 {
+                    PixelType::Air
+                } else {
+                    PixelType::Stone
+                };
+
+                chunk.push(Pixel::from_pixel_type(pixel_type));
+            }
+        }
+
+        let image = Image::gen_image_color(
+            CHUNK_SIZE.0 as u16,
+            CHUNK_SIZE.1 as u16,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+        );
+
+        let texture = Texture2D::from_image(&image);
+        texture.set_filter(FilterMode::Nearest);
+
+        Self {
+            width: size.0 as i32,
+            height: size.1 as i32,
+            key: chunk_key,
+            chunk,
+            last_updates,
+
+            image,
+            texture,
+
+            updated_last_frame: true,
         }
     }
 

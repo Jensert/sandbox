@@ -27,8 +27,8 @@ impl Pixel {
             pixel_type,
             color,
             temperature: 1,
-            stability: 0.0,
-            state: PixelState::Falling,
+            stability: 1.0,
+            state: PixelState::Stable,
         }
     }
 

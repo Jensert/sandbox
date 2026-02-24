@@ -3,7 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use macroquad::{main, prelude::*, rand::RandGenerator};
 mod app;
 mod brush;
-mod mapgenerator;
+mod noise;
 mod pixel;
 mod pixelgrid;
 mod pixeltype;
@@ -35,12 +35,11 @@ async fn main() {
     let mut seed = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards")
-        .as_nanos()
-        .try_into()
-        .expect("Time went too fast");
+        .as_secs();
     seed = seed % 12345678;
     rng.srand(seed);
-    let mut app = App::new((width_ratio, height_ratio), &rng).await;
+    println!("{seed}");
+    let mut app = App::new((width_ratio, height_ratio), seed).await;
     let mut app_timer = AppTimer::new();
     println!("Started app with seed: {seed}");
     // Create pixelgrid with the seed
@@ -63,7 +62,7 @@ async fn main() {
         // and uses the default camera. This is not drawn to the render target
         // ALl UI drawing and everything else that requires screen space, instead of world space, goes here
         // Draw the UI.
-        app.draw_ui(&rng);
+        app.draw_ui();
 
         next_frame().await;
     }
