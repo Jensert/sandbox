@@ -68,7 +68,7 @@ impl ChunkGrid {
         }
     }
 
-    pub fn update(&mut self, rng: &RandGenerator, render_ratio: (f32, f32)) {
+    pub fn update(&mut self, rng: &RandGenerator) {
         // Updating should be multiple stages:
         // First: get all movements for each chunk
         // Second: apply all movements
@@ -131,7 +131,7 @@ impl ChunkGrid {
         }
     }
 
-    pub fn generate_chunks(&mut self, seed: u64) {
+    pub fn regenerate_chunks(&mut self, seed: u64) {
         let mut keys = vec![];
         for (x, y) in self.grid.keys() {
             keys.push((*x, *y));
@@ -139,6 +139,17 @@ impl ChunkGrid {
         for (x, y) in keys {
             self.grid_mut()
                 .insert((x, y), Chunk::new(CHUNK_SIZE, seed, (x, y)));
+        }
+    }
+
+    pub fn generate_chunk_if_not_exists(&mut self, seed: u64, chunk_key: (i32, i32)) {
+        match self.grid.get(&chunk_key) {
+            None => {
+                println!("generating chunk at {chunk_key:?}");
+                self.grid
+                    .insert(chunk_key, Chunk::new(CHUNK_SIZE, seed, chunk_key));
+            }
+            Some(_) => {}
         }
     }
 
@@ -372,7 +383,7 @@ impl ChunkGrid {
         }
     }
 
-    pub fn query_world_with_chunk_key(
+    pub fn _query_world_with_chunk_key(
         &self,
         chunk_key: (i32, i32),
         chunk_x: i32,
@@ -492,7 +503,7 @@ pub struct Chunk {
     updated_last_frame: bool,
 }
 impl Chunk {
-    pub fn empty(size: (usize, usize), _rng: &RandGenerator, key: (i32, i32)) -> Self {
+    pub fn _empty(size: (usize, usize), _rng: &RandGenerator, key: (i32, i32)) -> Self {
         let chunk = vec![Pixel::empty(); CHUNK_SIZE.0 as usize * CHUNK_SIZE.1 as usize];
         let last_updates = HashMap::new();
 
@@ -536,9 +547,13 @@ impl Chunk {
                 let world_y = chunk_key.1 * chunk_size.1 + y;
 
                 let hash =
-                    noise::noise2D(world_x as f32 * 0.05, world_y as f32 * 0.05, seed as i32);
-                let pixel_type = if hash < 0.2 {
+                    noise::noise2d(world_x as f32 * 0.05, world_y as f32 * 0.05, seed as i32);
+                let pixel_type = if hash < 0.01 {
+                    PixelType::HardStone
+                } else if hash < 0.18 {
                     PixelType::Air
+                } else if hash < 0.2 {
+                    PixelType::HardStone
                 } else {
                     PixelType::Stone
                 };
@@ -560,6 +575,8 @@ impl Chunk {
 
         let texture = Texture2D::from_image(&image);
         texture.set_filter(FilterMode::Nearest);
+
+        println!("Chunk generated");
 
         Self {
             width: size.0 as i32,
@@ -658,7 +675,7 @@ impl Chunk {
         draw_line(x + x_adjust, y, x + x_adjust, y + y_adjust, 1.0, WHITE);
     }
 
-    pub fn draw_stability(&self, chunk_key_x: i32, chunk_key_y: i32, render_ratio: (f32, f32)) {
+    pub fn _draw_stability(&self, chunk_key_x: i32, chunk_key_y: i32, render_ratio: (f32, f32)) {
         let chunk_world_x = chunk_key_x as f32 * CHUNK_SIZE.0 as f32;
         let chunk_world_y = chunk_key_y as f32 * CHUNK_SIZE.1 as f32;
 

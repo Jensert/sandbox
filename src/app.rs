@@ -5,7 +5,7 @@ use macroquad::{prelude::*, rand::RandGenerator};
 use crate::{
     FIXED_TIMESTEP, RENDER_SIZE,
     brush::Brush,
-    pixelgrid::ChunkGrid,
+    pixelgrid::{ChunkGrid, ChunkPosition},
     pixeltype::PixelType,
     ui::{UiMode, UserInterface},
 };
@@ -36,7 +36,7 @@ pub struct App {
 }
 impl App {
     pub async fn new(render_ratio: (f32, f32), seed: u64) -> Self {
-        let mut chunk_grid = ChunkGrid::new(render_ratio, seed);
+        let chunk_grid = ChunkGrid::new(render_ratio, seed);
 
         println!("Loading shaders");
         let vertex_shader =
@@ -146,7 +146,7 @@ impl App {
     }
 
     pub fn target(&self) -> Vec2 {
-        self.user_interface().target_position()
+        self.user_interface().camera_position()
     }
 
     pub fn compile_shader(&mut self, vertex_shader: String, fragment_shader: String) {
@@ -216,7 +216,7 @@ impl App {
             {
                 if pixel.pixel_type() == PixelType::Minion {
                     let ui = self.user_interface_mut();
-                    ui.set_target_position(mouse_world_position);
+                    ui.set_camera_position(mouse_world_position);
                 }
             }
         }
@@ -306,8 +306,29 @@ impl App {
             self.user_interface.disable_zoom();
         }
 
-        if is_key_pressed(KeyCode::Left) {
-            self.render_camera.target.x -= 1.0;
+        if is_key_down(KeyCode::Left) {
+            let mut position = self.user_interface().camera_position();
+            position.x -= 1.0;
+
+            self.user_interface_mut().set_camera_position(position);
+        }
+        if is_key_down(KeyCode::Right) {
+            let mut position = self.user_interface().camera_position();
+            position.x += 1.0;
+
+            self.user_interface_mut().set_camera_position(position);
+        }
+        if is_key_down(KeyCode::Up) {
+            let mut position = self.user_interface().camera_position();
+            position.y -= 1.0;
+
+            self.user_interface_mut().set_camera_position(position);
+        }
+        if is_key_down(KeyCode::Down) {
+            let mut position = self.user_interface().camera_position();
+            position.y += 1.0;
+
+            self.user_interface_mut().set_camera_position(position);
         }
     }
 
@@ -318,12 +339,12 @@ impl App {
 
     pub fn set_camera_target(&mut self, world_position: Vec2) {
         self.user_interface_mut()
-            .set_target_position(world_position);
+            .set_camera_position(world_position);
     }
 
     pub fn reset_camera_target(&mut self) {
         let screen_center = Vec2::new(RENDER_SIZE.0 as f32 / 2.0, RENDER_SIZE.1 as f32 / 2.0);
-        self.user_interface_mut().set_target_position(screen_center);
+        self.user_interface_mut().set_camera_position(screen_center);
     }
 
     pub fn start_drawing(&self) {
@@ -396,9 +417,25 @@ impl App {
     }
 
     pub fn update(&mut self, rng: &RandGenerator) {
-        let ratio = self.render_ratio.clone();
-        self.chunks_mut().update(rng, ratio);
-        self.render_camera.target = self.user_interface.target_position();
+        self.chunks_mut().update(rng);
+        self.render_camera.target = self.user_interface.camera_position();
+        let viewport = ViewPort::from_camera(&self.render_camera);
+        self.chunk_grid.generate_chunk_if_not_exists(
+            self.seed,
+            ChunkPosition::from_world_position(viewport.top_left).chunk_key,
+        );
+        self.chunk_grid.generate_chunk_if_not_exists(
+            self.seed,
+            ChunkPosition::from_world_position(viewport.top_right).chunk_key,
+        );
+        self.chunk_grid.generate_chunk_if_not_exists(
+            self.seed,
+            ChunkPosition::from_world_position(viewport.bottom_left).chunk_key,
+        );
+        self.chunk_grid.generate_chunk_if_not_exists(
+            self.seed,
+            ChunkPosition::from_world_position(viewport.bottom_right).chunk_key,
+        );
         let frag = self.user_interface().fragment_shader();
         let vert = self.user_interface().vertex_shader();
         if self.fragment_texture_shader != frag || self.vertex_shader != vert {
@@ -430,6 +467,28 @@ impl AppTimer {
         while self.accumulator >= FIXED_TIMESTEP {
             physics_step();
             self.accumulator -= FIXED_TIMESTEP;
+        }
+    }
+}
+
+/// Used to get the viewport coordinates of the camera
+pub struct ViewPort {
+    top_left: Vec2,
+    top_right: Vec2,
+    bottom_left: Vec2,
+    bottom_right: Vec2,
+}
+impl ViewPort {
+    pub fn from_camera(camera: &Camera2D) -> Self {
+        let top_left = (camera.target.x - 160.0, camera.target.y - 90.0).into();
+        let top_right = (camera.target.x + 160.0, camera.target.y - 90.0).into();
+        let bottom_left = (camera.target.x - 160.0, camera.target.y + 90.0).into();
+        let bottom_right = (camera.target.x + 160.0, camera.target.y + 90.0).into();
+        Self {
+            top_left,
+            top_right,
+            bottom_left,
+            bottom_right,
         }
     }
 }

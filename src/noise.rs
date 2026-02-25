@@ -19,7 +19,7 @@ pub fn lerp(start: f32, stop: f32, step: f32) -> f32 {
     return start + step * (stop - start);
 }
 
-pub fn noise2D(x: f32, y: f32, seed: i32) -> f32 {
+pub fn noise2d(x: f32, y: f32, seed: i32) -> f32 {
     let x0 = x.floor() as i32;
     let y0 = y.floor() as i32;
     let x1 = x0 + 1;

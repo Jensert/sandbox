@@ -15,6 +15,7 @@
 [x] Add decay mechanic to avoid always falling and chaotic worlds
     THis should be added by changing the stability of all surrounding pixels whenever 1 pixel is added or removed
 [x] Move UI logic and drawing to a seperate struct. This struct should be owned by App.
+[x] Improved world gen. It is now easier to generate a continuous world
 [] Add Game User Interface and different modes:
     [] Add a drawing mode
     [] Add a select mode (used for selecting minions)

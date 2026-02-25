@@ -18,7 +18,7 @@ pub struct UserInterface {
 
     // actual gameplay parameters
     target_pixel: Option<Pixel>,
-    target_position: Vec2,
+    camera_position: Vec2,
 }
 
 impl UserInterface {
@@ -35,7 +35,7 @@ impl UserInterface {
             ui_mode: UiMode::Select,
 
             target_pixel: None,
-            target_position: Vec2::new(RENDER_SIZE.0 as f32 / 2.0, RENDER_SIZE.1 as f32 / 2.0),
+            camera_position: Vec2::new(RENDER_SIZE.0 as f32 / 2.0, RENDER_SIZE.1 as f32 / 2.0),
         }
     }
 
@@ -83,16 +83,16 @@ impl UserInterface {
         self.target_pixel = None
     }
 
-    pub fn target_position(&self) -> Vec2 {
-        self.target_position
+    pub fn camera_position(&self) -> Vec2 {
+        self.camera_position
     }
 
-    pub fn set_target_position(&mut self, position: Vec2) {
-        self.target_position = position
+    pub fn set_camera_position(&mut self, position: Vec2) {
+        self.camera_position = position
     }
 
-    pub fn reset_target_position(&mut self) {
-        self.target_position = Vec2::new(RENDER_SIZE.0 as f32 / 2.0, RENDER_SIZE.1 as f32 / 2.0);
+    pub fn reset_camera_position(&mut self) {
+        self.camera_position = Vec2::new(RENDER_SIZE.0 as f32 / 2.0, RENDER_SIZE.1 as f32 / 2.0);
     }
 
     pub fn toggle_debug(&mut self) {
@@ -192,7 +192,7 @@ impl UserInterface {
                     chunk_grid.clear();
                 }
                 if ui.button(None, "Regenerate pixelgrid") {
-                    chunk_grid.generate_chunks(seed);
+                    chunk_grid.regenerate_chunks(seed);
                 }
 
                 // Shader functions
@@ -313,7 +313,7 @@ impl UserInterface {
                         }
                         ui.label(
                             None,
-                            format!("Targeted position: {}", self.target_position()).as_str(),
+                            format!("Camera position: {}", self.camera_position()).as_str(),
                         );
                     });
             }
