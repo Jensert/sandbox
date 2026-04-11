@@ -589,7 +589,7 @@ impl Chunk {
                         // ORE GENERATION (inside stone)
                         // Each ore should get its own noise + depth
                         let gold_n = noise::noise2d(
-                            world_x as f32 * 0.04,
+                            world_x as f32 * 0.03,
                             world_y as f32 * 0.04,
                             seed as i32 + 2,
                         );
