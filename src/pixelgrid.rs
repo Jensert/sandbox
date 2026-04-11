@@ -45,10 +45,10 @@ pub struct ChunkGrid {
 impl ChunkGrid {
     pub fn new(render_ratio: (f32, f32), seed: u64) -> Self {
         let mut grid = HashMap::new();
-        grid.insert((0, 0), Chunk::new(CHUNK_SIZE, seed, (0, 0)));
-        grid.insert((0, 1), Chunk::new(CHUNK_SIZE, seed, (0, 1)));
-        grid.insert((1, 0), Chunk::new(CHUNK_SIZE, seed, (1, 0)));
-        grid.insert((1, 1), Chunk::new(CHUNK_SIZE, seed, (1, 1)));
+        grid.insert((0, 0), Chunk::new(CHUNK_SIZE, seed, (0, 0), render_ratio));
+        grid.insert((0, 1), Chunk::new(CHUNK_SIZE, seed, (0, 1), render_ratio));
+        grid.insert((1, 0), Chunk::new(CHUNK_SIZE, seed, (1, 0), render_ratio));
+        grid.insert((1, 1), Chunk::new(CHUNK_SIZE, seed, (1, 1), render_ratio));
 
         let image = Image::gen_image_color(
             (RENDER_SIZE.0 as f32 * render_ratio.0) as u16,
@@ -68,13 +68,13 @@ impl ChunkGrid {
         }
     }
 
-    pub fn update(&mut self, rng: &RandGenerator) {
+    pub fn update(&mut self, rng: &RandGenerator, render_ratio: (f32, f32)) {
         // Updating should be multiple stages:
         // First: get all movements for each chunk
         // Second: apply all movements
         let mut chunk_movements: Vec<Vec<GridMovement>> = vec![];
         for ((_x, _y), chunk) in self.grid.iter_mut() {
-            chunk_movements.push(chunk.get_chunk_movements(rng)); // Update all in-chunk movements and return all crosschunk movements
+            chunk_movements.push(chunk.get_chunk_movements(rng, render_ratio)); // Update all in-chunk movements and return all crosschunk movements
         }
 
         // Apply all cross chunk movements
@@ -131,23 +131,30 @@ impl ChunkGrid {
         }
     }
 
-    pub fn regenerate_chunks(&mut self, seed: u64) {
+    pub fn regenerate_chunks(&mut self, seed: u64, render_ratio: (f32, f32)) {
         let mut keys = vec![];
         for (x, y) in self.grid.keys() {
             keys.push((*x, *y));
         }
         for (x, y) in keys {
             self.grid_mut()
-                .insert((x, y), Chunk::new(CHUNK_SIZE, seed, (x, y)));
+                .insert((x, y), Chunk::new(CHUNK_SIZE, seed, (x, y), render_ratio));
         }
     }
 
-    pub fn generate_chunk_if_not_exists(&mut self, seed: u64, chunk_key: (i32, i32)) {
+    pub fn generate_chunk_if_not_exists(
+        &mut self,
+        seed: u64,
+        chunk_key: (i32, i32),
+        render_ratio: (f32, f32),
+    ) {
         match self.grid.get(&chunk_key) {
             None => {
                 println!("generating chunk at {chunk_key:?}");
-                self.grid
-                    .insert(chunk_key, Chunk::new(CHUNK_SIZE, seed, chunk_key));
+                self.grid.insert(
+                    chunk_key,
+                    Chunk::new(CHUNK_SIZE, seed, chunk_key, render_ratio),
+                );
             }
             Some(_) => {}
         }
@@ -161,40 +168,19 @@ impl ChunkGrid {
         res
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, draw_debug: bool) {
         for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
             chunk.draw_texture(*chunk_key_x, *chunk_key_y);
-        }
-    }
-
-    pub fn draw_borders(&self, render_ratio: (f32, f32)) {
-        for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
-            chunk.draw_border(*chunk_key_x, *chunk_key_y, render_ratio);
-        }
-    }
-
-    pub fn draw_stability_to_texture(&mut self, render_ratio: (f32, f32)) {
-        for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
-            let chunk_world_x = *chunk_key_x as f32 * CHUNK_SIZE.0 as f32;
-            let chunk_world_y = *chunk_key_y as f32 * CHUNK_SIZE.1 as f32;
-
-            for y in 0..CHUNK_SIZE.1 {
-                for x in 0..CHUNK_SIZE.0 {
-                    if let Some(pixel) = chunk.get(x as i32, y as i32) {
-                        if pixel.pixel_type() == PixelType::Air {
-                            continue;
-                        }
-                        let color =
-                            Color::new(1.0 - pixel.stability(), pixel.stability(), 0.0, 1.0);
-                        let screen_x = (chunk_world_x + x as f32) * render_ratio.0;
-                        let screen_y = (chunk_world_y + y as f32) * render_ratio.1;
-                        self.image
-                            .set_pixel(screen_x as u32, screen_y as u32, color);
-                    }
-                }
+            if draw_debug {
+                chunk.draw_stability_texture(*chunk_key_x, *chunk_key_y);
             }
         }
-        self.texture = Texture2D::from_image(&self.image);
+    }
+
+    pub fn draw_borders(&self, render_ratio: (f32, f32), camera_target: Vec2) {
+        for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
+            chunk.draw_border(*chunk_key_x, *chunk_key_y, render_ratio, camera_target);
+        }
     }
 
     pub fn draw_texture(&self) {
@@ -500,10 +486,18 @@ pub struct Chunk {
     image: Image,
     texture: Texture2D,
 
+    stability_image: Image,
+    stability_texture: Texture2D,
+
     updated_last_frame: bool,
 }
 impl Chunk {
-    pub fn _empty(size: (usize, usize), _rng: &RandGenerator, key: (i32, i32)) -> Self {
+    pub fn _empty(
+        size: (usize, usize),
+        _rng: &RandGenerator,
+        key: (i32, i32),
+        render_ratio: (f32, f32),
+    ) -> Self {
         let chunk = vec![Pixel::empty(); CHUNK_SIZE.0 as usize * CHUNK_SIZE.1 as usize];
         let last_updates = HashMap::new();
 
@@ -521,6 +515,20 @@ impl Chunk {
         let texture = Texture2D::from_image(&image);
         texture.set_filter(FilterMode::Nearest);
 
+        let stability_image = Image::gen_image_color(
+            CHUNK_SIZE.0 as u16,
+            CHUNK_SIZE.1 as u16,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+        );
+
+        let stability_texture = Texture2D::from_image(&stability_image);
+        stability_texture.set_filter(FilterMode::Nearest);
+
         Self {
             width: size.0 as i32,
             height: size.1 as i32,
@@ -530,12 +538,19 @@ impl Chunk {
 
             image,
             texture,
+            stability_image,
+            stability_texture,
 
             updated_last_frame: true,
         }
     }
 
-    pub fn new(size: (usize, usize), seed: u64, chunk_key: (i32, i32)) -> Self {
+    pub fn new(
+        size: (usize, usize),
+        seed: u64,
+        chunk_key: (i32, i32),
+        render_ratio: (f32, f32),
+    ) -> Self {
         let mut chunk = vec![];
         let last_updates = HashMap::new();
 
@@ -576,6 +591,20 @@ impl Chunk {
         let texture = Texture2D::from_image(&image);
         texture.set_filter(FilterMode::Nearest);
 
+        let stability_image = Image::gen_image_color(
+            CHUNK_SIZE.0 as u16,
+            CHUNK_SIZE.1 as u16,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+        );
+
+        let stability_texture = Texture2D::from_image(&stability_image);
+        stability_texture.set_filter(FilterMode::Nearest);
+
         println!("Chunk generated");
 
         Self {
@@ -587,6 +616,8 @@ impl Chunk {
 
             image,
             texture,
+            stability_image,
+            stability_texture,
 
             updated_last_frame: true,
         }
@@ -594,7 +625,11 @@ impl Chunk {
 
     /// The update function returns a gridmovements. The return type is used
     /// by the parent struct ChunkGrid to handle all chunk movements.
-    pub fn get_chunk_movements(&mut self, rng: &RandGenerator) -> Vec<GridMovement> {
+    pub fn get_chunk_movements(
+        &mut self,
+        rng: &RandGenerator,
+        render_ratio: (f32, f32),
+    ) -> Vec<GridMovement> {
         self.last_updates.clear();
         // We filter_map() the hashmap
         // First we match the PixelType to call the appropriate pixel update function
@@ -615,7 +650,8 @@ impl Chunk {
             }
         }
         if self.updated_last_frame || !changes.is_empty() {
-            self.update_textures();
+            self.update_texture();
+            self.update_stability_texture();
         }
         return changes;
     }
@@ -624,10 +660,6 @@ impl Chunk {
     /// Currently this is called every frame.
     /// Should probably only be called if there is a change in the chunk,
     /// but this is fine for now
-    pub fn update_textures(&mut self) {
-        self.update_texture();
-    }
-
     pub fn update_texture(&mut self) {
         for y in 0..CHUNK_SIZE.1 {
             for x in 0..CHUNK_SIZE.0 {
@@ -639,6 +671,21 @@ impl Chunk {
         }
 
         self.texture.update(&self.image);
+    }
+
+    pub fn update_stability_texture(&mut self) {
+        for y in 0..CHUNK_SIZE.1 {
+            for x in 0..CHUNK_SIZE.0 {
+                if let Some(pixel) = self.get(x as i32, y as i32) {
+                    if pixel.pixel_type() == PixelType::Air {
+                        continue;
+                    }
+                    let color = Color::new(1.0 - pixel.stability(), pixel.stability(), 0.0, 1.0);
+                    self.stability_image.set_pixel(x as u32, y as u32, color);
+                }
+            }
+        }
+        self.stability_texture = Texture2D::from_image(&self.stability_image);
     }
 
     /// Draw the chunk's texture to the screen in the appropriate coordinates
@@ -658,12 +705,51 @@ impl Chunk {
         );
     }
 
-    pub fn draw_border(&self, chunk_key_x: i32, chunk_key_y: i32, render_ratio: (f32, f32)) {
+    /// Draw the chunk's texture to the screen in the appropriate coordinates
+    /// The chunk key are transformed to screen coordinates
+    pub fn draw_stability_texture(&self, chunk_key_x: i32, chunk_key_y: i32) {
+        let chunk_x = chunk_key_x as f32 * CHUNK_SIZE.0 as f32;
+        let chunk_y = chunk_key_y as f32 * CHUNK_SIZE.1 as f32;
+
+        let view_chunk_x = chunk_x;
+        let view_chunk_y = chunk_y;
+
+        draw_texture_ex(
+            &self.stability_texture,
+            view_chunk_x as f32,
+            view_chunk_y as f32,
+            Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 0.2,
+            },
+            DrawTextureParams {
+                dest_size: Some(Vec2 {
+                    x: self.stability_texture.width(),
+                    y: self.stability_texture.height(),
+                }),
+                ..Default::default()
+            },
+        );
+    }
+
+    pub fn draw_border(
+        &self,
+        chunk_key_x: i32,
+        chunk_key_y: i32,
+        render_ratio: (f32, f32),
+        camera_target: Vec2,
+    ) {
         let x_adjust = CHUNK_SIZE.0 as f32 * render_ratio.0;
         let y_adjust = CHUNK_SIZE.1 as f32 * render_ratio.1;
 
-        let x = chunk_key_x as f32 * x_adjust;
-        let y = chunk_key_y as f32 * y_adjust;
+        // Offset by camera position, shifted so camera target maps to screen center
+        let screen_center_x = (RENDER_SIZE.0 as f32 / 2.0) * render_ratio.0;
+        let screen_center_y = (RENDER_SIZE.1 as f32 / 2.0) * render_ratio.1;
+
+        let x = chunk_key_x as f32 * x_adjust - camera_target.x * render_ratio.0 + screen_center_x;
+        let y = chunk_key_y as f32 * y_adjust - camera_target.y * render_ratio.1 + screen_center_y;
 
         // Top border
         draw_line(x, y, x + x_adjust, y, 1.0, WHITE);
@@ -673,25 +759,6 @@ impl Chunk {
         draw_line(x, y, x, y + y_adjust, 1.0, WHITE);
         // Right border
         draw_line(x + x_adjust, y, x + x_adjust, y + y_adjust, 1.0, WHITE);
-    }
-
-    pub fn _draw_stability(&self, chunk_key_x: i32, chunk_key_y: i32, render_ratio: (f32, f32)) {
-        let chunk_world_x = chunk_key_x as f32 * CHUNK_SIZE.0 as f32;
-        let chunk_world_y = chunk_key_y as f32 * CHUNK_SIZE.1 as f32;
-
-        for y in 0..CHUNK_SIZE.1 {
-            for x in 0..CHUNK_SIZE.0 {
-                if let Some(pixel) = self.get(x as i32, y as i32) {
-                    if pixel.pixel_type() != PixelType::Air {
-                        let color =
-                            Color::new(1.0 - pixel.stability(), pixel.stability(), 0.0, 1.0);
-                        let screen_x = (chunk_world_x + x as f32) * render_ratio.0;
-                        let screen_y = (chunk_world_y + y as f32) * render_ratio.1;
-                        draw_rectangle(screen_x, screen_y, 1.0, 1.0, color);
-                    }
-                }
-            }
-        }
     }
 
     pub fn query(&self, x: i32, y: i32) -> GridQuery {

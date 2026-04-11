@@ -55,7 +55,7 @@ async fn main() {
         // All drawing logic goes after this
         clear_background(SKYBLUE);
         // Draw the pixel chunks
-        app.chunks().draw();
+        app.chunks().draw(app.user_interface().debug_enabled());
         // Stop the current draw call
         app.stop_drawing();
         // Everything that is drawn after app.stop_drawing() is called is drawn at screen resolution

@@ -174,10 +174,11 @@ impl App {
             self.render_ratio,
             self.seed,
         );
+        let camera_target = self.user_interface().camera_position();
         if self.user_interface().debug_enabled() {
-            self.chunks().draw_borders(self.render_ratio());
+            self.chunks()
+                .draw_borders(self.render_ratio(), self.user_interface().camera_position());
             let ratio = self.render_ratio;
-            self.chunks_mut().draw_stability_to_texture(ratio);
             self.chunks().draw_texture();
         }
     }
@@ -223,14 +224,14 @@ impl App {
 
         // Handle scrolling
         // First we get the vertical scroll direction and the amount that is scrolled
-        let mut scroll = mouse_wheel().1;
+        let mut scroll = mouse_wheel().1 / mouse_wheel().1;
         // First we check if we are scrolling up
         if scroll > 0.0 {
             self.total_scroll += scroll; // Add the total amount scrolled
             // Once we scrolled 120.0 up (idk in what unit) we count it as '1 scroll'
-            if self.total_scroll >= 120.0 {
+            if self.total_scroll >= 1.0 {
                 // We divide the total scroll by 120.0 to get the total scroll amount in single units
-                scroll = self.total_scroll / 120.0;
+                scroll = self.total_scroll / 1.0;
                 // We loop over how many times we have scrolled and do an action for every scroll
                 for _ in 0..scroll as i32 {
                     if is_key_down(KeyCode::LeftShift) {
@@ -253,9 +254,9 @@ impl App {
             // Then we do that exact same thing but for scrolling down
         } else if scroll < 0.0 {
             self.total_scroll += scroll;
-            if self.total_scroll <= -110.0 {
+            if self.total_scroll <= -1.0 {
                 // scrolled down
-                scroll = self.total_scroll / 120.0;
+                scroll = self.total_scroll / -1.0;
                 for _ in 0..scroll.abs() as i32 {
                     if is_key_down(KeyCode::LeftShift) {
                         self.brush_mut().brush_type_mut().previous();
@@ -281,10 +282,6 @@ impl App {
         if is_key_down(KeyCode::LeftShift) {
             if is_key_pressed(KeyCode::Escape) {
                 self.quit();
-            }
-            if is_key_pressed(KeyCode::S) {
-                let ratio = self.render_ratio().clone();
-                self.chunks_mut().draw_stability_to_texture(ratio);
             }
         }
         if is_key_pressed(KeyCode::Escape) {
@@ -417,24 +414,29 @@ impl App {
     }
 
     pub fn update(&mut self, rng: &RandGenerator) {
-        self.chunks_mut().update(rng);
+        let render_ratio = self.render_ratio();
+        self.chunks_mut().update(rng, render_ratio);
         self.render_camera.target = self.user_interface.camera_position();
         let viewport = ViewPort::from_camera(&self.render_camera);
         self.chunk_grid.generate_chunk_if_not_exists(
             self.seed,
             ChunkPosition::from_world_position(viewport.top_left).chunk_key,
+            render_ratio,
         );
         self.chunk_grid.generate_chunk_if_not_exists(
             self.seed,
             ChunkPosition::from_world_position(viewport.top_right).chunk_key,
+            render_ratio,
         );
         self.chunk_grid.generate_chunk_if_not_exists(
             self.seed,
             ChunkPosition::from_world_position(viewport.bottom_left).chunk_key,
+            render_ratio,
         );
         self.chunk_grid.generate_chunk_if_not_exists(
             self.seed,
             ChunkPosition::from_world_position(viewport.bottom_right).chunk_key,
+            render_ratio,
         );
         let frag = self.user_interface().fragment_shader();
         let vert = self.user_interface().vertex_shader();

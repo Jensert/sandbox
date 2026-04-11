@@ -131,6 +131,9 @@ impl Pixel {
         y: i32,
         rng: &RandGenerator,
     ) -> Option<GridMovement> {
+        if self.pixel_type() == PixelType::Minion {
+            self.update_minion(pixel_grid, x, y, rng);
+        }
         if self.stability > 0.0 {
             return None;
         }
@@ -196,6 +199,10 @@ impl Pixel {
 
             _ => None,
         }
+    }
+
+    pub fn update_minion(&self, pixel_grid: &Chunk, x: i32, y: i32, rng: &RandGenerator) {
+        todo!()
     }
 
     pub fn color(&self) -> Color {

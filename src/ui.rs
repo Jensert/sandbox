@@ -136,7 +136,7 @@ impl UserInterface {
     ) {
         self.draw_toolbar(render_ratio, brush);
         if self.debug_overlay_enabled {
-            self.draw_debug(chunk_grid, brush, mouse_world_position, seed)
+            self.draw_debug(chunk_grid, brush, mouse_world_position, seed, render_ratio)
         } else {
             self.draw_info(brush);
         }
@@ -150,6 +150,7 @@ impl UserInterface {
         brush: &mut Brush,
         mouse_world_position: Vec2,
         seed: u64,
+        render_ratio: (f32, f32),
     ) {
         widgets::Window::new(hash!(), vec2(0.0, 0.0), vec2(300.0, 300.0))
             .label("Debug window")
@@ -159,31 +160,31 @@ impl UserInterface {
                 // General technical information
                 ui.separator();
                 // FPS
-                ui.label(None, format!("FPS: {}", get_fps()).as_str());
+                ui.label(None, &format!("FPS: {}", get_fps()).as_str());
                 // Total pixels in world
                 ui.label(
                     None,
-                    format!("# Pixels: {}", chunk_grid.get_total_pixels()).as_str(),
+                    &format!("# Pixels: {}", chunk_grid.get_total_pixels()).as_str(),
                 );
                 // Mouse position (in screen pixels)
                 ui.label(
                     None,
-                    format!("Mouse screen position: {:?}", mouse_position()).as_str(),
+                    &format!("Mouse screen position: {:?}", mouse_position()).as_str(),
                 );
                 ui.label(
                     None,
-                    format!("Mouse world position: {:?}", mouse_world_position).as_str(),
+                    &format!("Mouse world position: {:?}", mouse_world_position).as_str(),
                 );
                 let position = ChunkPosition::from_world_position(mouse_world_position);
                 ui.label(
                     None,
-                    format!(
+                    &format!(
                         "Mouse chunk position: {:?}, {:?}",
                         position.chunk_key, position.chunk_coordinate
                     )
                     .as_str(),
                 );
-                ui.label(None, format!("Mouse zoom: {}", self.zoom).as_str());
+                ui.label(None, &format!("Mouse zoom: {}", self.zoom).as_str());
 
                 // ChunkGrid functions
                 ui.separator();
@@ -192,7 +193,7 @@ impl UserInterface {
                     chunk_grid.clear();
                 }
                 if ui.button(None, "Regenerate pixelgrid") {
-                    chunk_grid.regenerate_chunks(seed);
+                    chunk_grid.regenerate_chunks(seed, render_ratio);
                 }
 
                 // Shader functions
@@ -205,7 +206,10 @@ impl UserInterface {
                     true => "ON",
                     false => "OFF",
                 };
-                if ui.button(None, format!("Shader is {shader_status} - Toggle shader")) {
+                if ui.button(
+                    None,
+                    format!("Shader is {shader_status} - Toggle shader").as_str(),
+                ) {
                     self.toggle_shader();
                 }
 
@@ -214,13 +218,13 @@ impl UserInterface {
 
                 ui.label(
                     None,
-                    format!("Selected pixel: {}", brush.pixel_type().name_str()).as_str(),
+                    &format!("Selected pixel: {}", brush.pixel_type().name_str()).as_str(),
                 );
                 ui.label(
                     None,
-                    format!("Selected brush type: {}", brush.brush_type().as_str()).as_str(),
+                    &format!("Selected brush type: {}", brush.brush_type().as_str()).as_str(),
                 );
-                ui.label(None, format!("Brush size: {}", brush.size()).as_str());
+                ui.label(None, &format!("Brush size: {}", brush.size()).as_str());
             });
     }
 
@@ -237,7 +241,7 @@ impl UserInterface {
                 );
                 let mut widget_pixeltype = PixelType::first();
 
-                widgets::Window::new(hash!(), widget_pos, widget_size)
+                widgets::Window::new(hash!("debug_window"), widget_pos, widget_size)
                     .movable(false)
                     .titlebar(false)
                     .ui(&mut *root_ui(), |ui| {
@@ -282,14 +286,14 @@ impl UserInterface {
 
                         ui.label(
                             None,
-                            format!("Selected pixel: {}", brush.pixel_type().name_str()).as_str(),
+                            &format!("Selected pixel: {}", brush.pixel_type().name_str()).as_str(),
                         );
                         ui.label(
                             None,
-                            format!("Selected brush type: {}", brush.brush_type().as_str())
+                            &format!("Selected brush type: {}", brush.brush_type().as_str())
                                 .as_str(),
                         );
-                        ui.label(None, format!("Brush size: {}", brush.size()).as_str());
+                        ui.label(None, &format!("Brush size: {}", brush.size()).as_str());
                     });
             }
 
@@ -305,15 +309,15 @@ impl UserInterface {
                         if let Some(pixel) = self.target_pixel() {
                             ui.label(
                                 None,
-                                format!("Targeted pixel: {}", pixel.pixel_type().name_str())
+                                &format!("Targeted pixel: {}", pixel.pixel_type().name_str())
                                     .as_str(),
                             );
                         } else {
-                            ui.label(None, format!("Targeted pixel: {}", "None").as_str());
+                            ui.label(None, &format!("Targeted pixel: {}", "None").as_str());
                         }
                         ui.label(
                             None,
-                            format!("Camera position: {}", self.camera_position()).as_str(),
+                            &format!("Camera position: {}", self.camera_position()).as_str(),
                         );
                     });
             }
