@@ -413,6 +413,7 @@ impl App {
         }
     }
 
+    /// Updates all chunks within the viewport. All chunks outside this boundary are not updated to save CPU
     pub fn update(&mut self, rng: &RandGenerator) {
         let render_ratio = self.render_ratio();
         let camera_target = self.user_interface().camera_position();
@@ -426,12 +427,16 @@ impl App {
         let min_chunk_y = (viewport.top_left.y as i32).div_euclid(CHUNK_SIZE.1 as i32) - 1;
         let max_chunk_y = (viewport.bottom_left.y as i32).div_euclid(CHUNK_SIZE.1 as i32) + 1;
 
+        // Loop over viewport boundaries
         for cy in min_chunk_y..=max_chunk_y {
             for cx in min_chunk_x..=max_chunk_x {
+                // Generate chunk if a chunk does not exist in those coordinates
                 self.chunk_grid
                     .generate_chunk_if_not_exists(self.seed, (cx, cy), render_ratio);
             }
         }
+
+        // update shaders if shaders are updated. This is only used for shader programming / debugging
         let frag = self.user_interface().fragment_shader();
         let vert = self.user_interface().vertex_shader();
         if self.fragment_texture_shader != frag || self.vertex_shader != vert {

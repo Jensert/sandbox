@@ -68,12 +68,11 @@ impl ChunkGrid {
         }
     }
 
+    /// Update all chunks within the viewport
     pub fn update(&mut self, rng: &RandGenerator, render_ratio: (f32, f32), camera_target: Vec2) {
         // First get viewport, so we know which chunks are on screen and should be updated
         let center_chunk_x = (camera_target.x as i32).div_euclid(CHUNK_SIZE.0 as i32);
         let center_chunk_y = (camera_target.y as i32).div_euclid(CHUNK_SIZE.1 as i32);
-        println!("{:?}", center_chunk_x);
-        println!("{:?}", center_chunk_y);
         let active_keys: Vec<(i32, i32)> = vec![
             (center_chunk_x - 1, center_chunk_y - 1),
             (center_chunk_x, center_chunk_y - 1),
