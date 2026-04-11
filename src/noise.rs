@@ -38,3 +38,13 @@ pub fn noise2d(x: f32, y: f32, seed: i32) -> f32 {
 
     return lerp(ix0, ix1, sy);
 }
+
+pub fn surface_height(world_x: i32, world_sea_level: f32, seed: i32) -> i32 {
+    let amplitude = 80.0; // increase this for higher hills
+    let n = noise2d(
+        world_x as f32 * 0.02, // increase multiplication to make terrain more jagged
+        0.0,
+        seed,
+    );
+    (world_sea_level + n * amplitude) as i32
+}

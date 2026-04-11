@@ -1,4 +1,4 @@
-use macroquad::color::Color;
+use macroquad::color::{Color, GOLD};
 
 pub const LAVA: Color = Color::new(0.70, 0.16, 0.22, 1.00);
 pub const STONE: Color = Color::new(0.51, 0.51, 0.51, 1.00);
@@ -13,13 +13,14 @@ pub const PURPLE: Color = Color::new(0.78, 0.48, 1.00, 1.00);
 use crate::pixel::Pixel;
 
 const PIXEL_ORDER: &[PixelType] = &[
+    PixelType::Stone,
+    PixelType::Grass,
+    PixelType::Dirt,
     PixelType::Sand,
     PixelType::Water,
     PixelType::Lava,
-    PixelType::Dirt,
-    PixelType::Stone,
     PixelType::HardStone,
-    PixelType::Grass,
+    PixelType::Gold,
     PixelType::Minion,
 ];
 
@@ -27,13 +28,14 @@ const PIXEL_ORDER: &[PixelType] = &[
 pub enum PixelType {
     Air,
 
+    Stone,
+    Grass,
+    Dirt,
     Sand,
     Water,
     Lava,
-    Dirt,
-    Stone,
     HardStone,
-    Grass,
+    Gold,
 
     Minion,
 }
@@ -65,6 +67,7 @@ impl PixelType {
             PixelType::Dirt => "Dirt",
             PixelType::Stone => "Stone",
             PixelType::HardStone => "Hard Stone",
+            PixelType::Gold => "Gold",
             PixelType::Grass => "Grass",
 
             PixelType::Minion => "Minion",
@@ -94,6 +97,7 @@ impl PixelType {
             PixelType::Dirt => DIRT, //Color::new(rng.gen_range(0.25, 0.35), 0.25, 0.18, 1.00), // Darkbrown
             PixelType::Stone => STONE, //Color::new(0.5, 0.5, rng.gen_range(0.48, 0.53), 1.00), // Gray
             PixelType::HardStone => DEEPSTONE, //Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Dark Gray
+            PixelType::Gold => GOLD, //Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Gold
             PixelType::Grass => GRASS, //Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
             PixelType::Air => Color {
                 r: 0.0,
@@ -112,6 +116,7 @@ impl PixelType {
             PixelType::Lava => 0.25, //Color::new(rng.gen_range(0.65, 0.75), 0.25, 0.05, 1.00), // Red
             PixelType::Dirt => 0.5, //Color::new(rng.gen_range(0.25, 0.35), 0.25, 0.18, 1.00), // Darkbrown
             PixelType::Stone => 0.1, //Color::new(0.5, 0.5, rng.gen_range(0.48, 0.53), 1.00), // Gray
+            PixelType::Gold => 0.1, //Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Dark Gray
             PixelType::HardStone => 0.0, //Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Dark Gray
             PixelType::Grass => 0.3, //Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
             PixelType::Air => 0.0,
@@ -126,6 +131,7 @@ impl PixelType {
             PixelType::Lava => 1.0, //Color::new(rng.gen_range(0.65, 0.75), 0.25, 0.05, 1.00), // Red
             PixelType::Dirt => 0.35, //Color::new(rng.gen_range(0.25, 0.35), 0.25, 0.18, 1.00), // Darkbrown
             PixelType::Stone => 0.1, //Color::new(0.5, 0.5, rng.gen_range(0.48, 0.53), 1.00), // Gray
+            PixelType::Gold => 0.1, //Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Dark Gray
             PixelType::HardStone => 0.0, //Color::new(0.19, 0.20, rng.gen_range(0.18, 0.33), 1.00), // Dark Gray
             PixelType::Grass => 0.25, //Color::new(0.00, rng.gen_range(0.38, 0.51), 0.17, 1.00), // Dark green
             PixelType::Air => 1.0,
@@ -145,6 +151,7 @@ impl PixelType {
             PixelType::Lava => PixelMatter::Liquid,
             PixelType::Dirt => PixelMatter::Solid,
             PixelType::Stone => PixelMatter::Solid,
+            PixelType::Gold => PixelMatter::Solid,
             PixelType::HardStone => PixelMatter::Solid,
             PixelType::Grass => PixelMatter::Solid,
             PixelType::Minion => PixelMatter::Minion,

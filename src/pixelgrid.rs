@@ -556,23 +556,57 @@ impl Chunk {
 
         let chunk_size = (CHUNK_SIZE.0 as i32, CHUNK_SIZE.1 as i32);
 
+        // START WORLD GEN HERE
         for y in 0..chunk_size.1 {
             for x in 0..chunk_size.0 {
                 let world_x = chunk_key.0 * chunk_size.0 + x;
                 let world_y = chunk_key.1 * chunk_size.1 + y;
 
-                let hash =
-                    noise::noise2d(world_x as f32 * 0.05, world_y as f32 * 0.05, seed as i32);
-                let pixel_type = if hash < 0.01 {
-                    PixelType::HardStone
-                } else if hash < 0.18 {
-                    PixelType::Air
-                } else if hash < 0.2 {
-                    PixelType::HardStone
-                } else {
-                    PixelType::Stone
-                };
+                let sea_level = 40.0; // Set sea Y level
+                let surface_y = noise::surface_height(world_x, sea_level, seed as i32); // generate height map
+                const DIRT_DEPTH: i32 = 4;
 
+                let pixel_type = if world_y < surface_y {
+                    // above height map = Air
+                    PixelType::Air
+                } else if world_y == surface_y {
+                    // ground level = grass
+                    PixelType::Grass
+                } else if world_y < surface_y + DIRT_DEPTH {
+                    // dirt layer below grass
+                    PixelType::Dirt
+                } else {
+                    // UNDERGROUND
+                    let cave_n = noise::noise2d(
+                        world_x as f32 * 0.08,
+                        world_y as f32 * 0.08,
+                        seed as i32 + 1, // offset seed so caves are different than terrain shape
+                    );
+
+                    if cave_n < 0.12 {
+                        PixelType::Air
+                    } else {
+                        // ORE GENERATION (inside stone)
+                        // Each ore should get its own noise + depth
+                        let gold_n = noise::noise2d(
+                            world_x as f32 * 0.04,
+                            world_y as f32 * 0.04,
+                            seed as i32 + 2,
+                        );
+
+                        let depth = world_y - surface_y;
+                        match depth {
+                            ..=30 => PixelType::Stone,
+                            31.. => {
+                                if gold_n > 0.45 {
+                                    PixelType::Gold
+                                } else {
+                                    PixelType::Stone
+                                }
+                            }
+                        }
+                    }
+                };
                 chunk.push(Pixel::from_pixel_type(pixel_type));
             }
         }
