@@ -68,14 +68,35 @@ impl ChunkGrid {
         }
     }
 
-    pub fn update(&mut self, rng: &RandGenerator, render_ratio: (f32, f32)) {
+    pub fn update(&mut self, rng: &RandGenerator, render_ratio: (f32, f32), camera_target: Vec2) {
+        // First get viewport, so we know which chunks are on screen and should be updated
+        let center_chunk_x = (camera_target.x as i32).div_euclid(CHUNK_SIZE.0 as i32);
+        let center_chunk_y = (camera_target.y as i32).div_euclid(CHUNK_SIZE.1 as i32);
+        println!("{:?}", center_chunk_x);
+        println!("{:?}", center_chunk_y);
+        let active_keys: Vec<(i32, i32)> = vec![
+            (center_chunk_x - 1, center_chunk_y - 1),
+            (center_chunk_x, center_chunk_y - 1),
+            (center_chunk_x - 1, center_chunk_y),
+            (center_chunk_x, center_chunk_y),
+            (center_chunk_x + 1, center_chunk_y - 1),
+            (center_chunk_x - 1, center_chunk_y + 1),
+            (center_chunk_x + 1, center_chunk_y),
+            (center_chunk_x, center_chunk_y + 1),
+            (center_chunk_x + 1, center_chunk_y + 1),
+        ];
         // Updating should be multiple stages:
         // First: get all movements for each chunk
         // Second: apply all movements
         let mut chunk_movements: Vec<Vec<GridMovement>> = vec![];
-        for ((_x, _y), chunk) in self.grid.iter_mut() {
-            chunk_movements.push(chunk.get_chunk_movements(rng, render_ratio)); // Update all in-chunk movements and return all crosschunk movements
+        for key in &active_keys {
+            if let Some(chunk) = self.grid.get_mut(key) {
+                chunk_movements.push(chunk.get_chunk_movements(rng, render_ratio)); // Update all in-chunk movements and return all crosschunk movements
+            }
         }
+        // for ((_x, _y), chunk) in self.grid.iter_mut() {
+        //     chunk_movements.push(chunk.get_chunk_movements(rng, render_ratio)); // Update all in-chunk movements and return all crosschunk movements
+        // }
 
         // Apply all cross chunk movements
         for chunk in chunk_movements {

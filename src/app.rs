@@ -3,7 +3,7 @@ use std::fs::read_to_string;
 use macroquad::{prelude::*, rand::RandGenerator};
 
 use crate::{
-    FIXED_TIMESTEP, RENDER_SIZE,
+    CHUNK_SIZE, FIXED_TIMESTEP, RENDER_SIZE,
     brush::Brush,
     pixelgrid::{ChunkGrid, ChunkPosition},
     pixeltype::PixelType,
@@ -415,29 +415,23 @@ impl App {
 
     pub fn update(&mut self, rng: &RandGenerator) {
         let render_ratio = self.render_ratio();
-        self.chunks_mut().update(rng, render_ratio);
-        self.render_camera.target = self.user_interface.camera_position();
+        let camera_target = self.user_interface().camera_position();
+        self.render_camera.target = camera_target;
+        self.chunks_mut().update(rng, render_ratio, camera_target);
         let viewport = ViewPort::from_camera(&self.render_camera);
-        self.chunk_grid.generate_chunk_if_not_exists(
-            self.seed,
-            ChunkPosition::from_world_position(viewport.top_left).chunk_key,
-            render_ratio,
-        );
-        self.chunk_grid.generate_chunk_if_not_exists(
-            self.seed,
-            ChunkPosition::from_world_position(viewport.top_right).chunk_key,
-            render_ratio,
-        );
-        self.chunk_grid.generate_chunk_if_not_exists(
-            self.seed,
-            ChunkPosition::from_world_position(viewport.bottom_left).chunk_key,
-            render_ratio,
-        );
-        self.chunk_grid.generate_chunk_if_not_exists(
-            self.seed,
-            ChunkPosition::from_world_position(viewport.bottom_right).chunk_key,
-            render_ratio,
-        );
+
+        // Determine the range of chunk keys the viewport overlaps
+        let min_chunk_x = (viewport.top_left.x as i32).div_euclid(CHUNK_SIZE.0 as i32) - 1;
+        let max_chunk_x = (viewport.top_right.x as i32).div_euclid(CHUNK_SIZE.0 as i32) + 1;
+        let min_chunk_y = (viewport.top_left.y as i32).div_euclid(CHUNK_SIZE.1 as i32) - 1;
+        let max_chunk_y = (viewport.bottom_left.y as i32).div_euclid(CHUNK_SIZE.1 as i32) + 1;
+
+        for cy in min_chunk_y..=max_chunk_y {
+            for cx in min_chunk_x..=max_chunk_x {
+                self.chunk_grid
+                    .generate_chunk_if_not_exists(self.seed, (cx, cy), render_ratio);
+            }
+        }
         let frag = self.user_interface().fragment_shader();
         let vert = self.user_interface().vertex_shader();
         if self.fragment_texture_shader != frag || self.vertex_shader != vert {
@@ -482,10 +476,12 @@ pub struct ViewPort {
 }
 impl ViewPort {
     pub fn from_camera(camera: &Camera2D) -> Self {
-        let top_left = (camera.target.x - 160.0, camera.target.y - 90.0).into();
-        let top_right = (camera.target.x + 160.0, camera.target.y - 90.0).into();
-        let bottom_left = (camera.target.x - 160.0, camera.target.y + 90.0).into();
-        let bottom_right = (camera.target.x + 160.0, camera.target.y + 90.0).into();
+        let half_w = RENDER_SIZE.0 as f32 / 2.0;
+        let half_h = RENDER_SIZE.1 as f32 / 2.0;
+        let top_left = (camera.target.x - half_w, camera.target.y - half_h).into();
+        let top_right = (camera.target.x + half_w, camera.target.y - half_h).into();
+        let bottom_left = (camera.target.x - half_w, camera.target.y + half_h).into();
+        let bottom_right = (camera.target.x + half_w, camera.target.y + half_h).into();
         Self {
             top_left,
             top_right,
