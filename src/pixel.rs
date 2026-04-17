@@ -208,4 +208,10 @@ impl Pixel {
     pub fn color(&self) -> Color {
         self.color
     }
+
+    /// Returns true if this pixel could potentially move this frame.
+    /// Stable pixels with remaining stability don't need updating.
+    pub fn needs_update(&self) -> bool {
+        self.state == PixelState::Falling || self.stability <= 0.0
+    }
 }

@@ -661,7 +661,7 @@ impl Chunk {
 
         println!("Chunk generated");
 
-        Self {
+        let mut new_chunk = Self {
             width: size.0 as i32,
             height: size.1 as i32,
             key: chunk_key,
@@ -673,8 +673,12 @@ impl Chunk {
             stability_image,
             stability_texture,
 
-            updated_last_frame: true,
-        }
+            updated_last_frame: false,
+        };
+
+        new_chunk.update_texture();
+        new_chunk.update_stability_texture();
+        new_chunk
     }
 
     /// The update function returns a gridmovements. The return type is used
@@ -696,14 +700,18 @@ impl Chunk {
         for y in 0..CHUNK_SIZE.1 {
             for x in 0..CHUNK_SIZE.0 {
                 if let Some(pixel) = self.get(x as i32, y as i32) {
-                    if let Some(mut movement) = pixel.update(self, x as i32, y as i32, rng) {
-                        movement.set_chunk_keys(self.key);
-                        changes.push(movement);
+                    // Only process pixels that could potentially move
+                    if pixel.needs_update() {
+                        if let Some(mut movement) = pixel.update(self, x as i32, y as i32, rng) {
+                            movement.set_chunk_keys(self.key);
+                            changes.push(movement);
+                        }
                     }
                 }
             }
         }
         if self.updated_last_frame || !changes.is_empty() {
+            self.updated_last_frame = false;
             self.update_texture();
             self.update_stability_texture();
         }
