@@ -40,6 +40,7 @@ pub struct ChunkGrid {
     grid: HashMap<(i32, i32), Chunk>,
     image: Image,
     texture: Texture2D,
+    active_keys: Vec<(i32, i32)>,
 }
 
 impl ChunkGrid {
@@ -61,10 +62,13 @@ impl ChunkGrid {
             },
         );
         let texture = Texture2D::from_image(&image);
+
+        let active_keys = vec![];
         Self {
             grid,
             image,
             texture,
+            active_keys,
         }
     }
 
@@ -73,7 +77,7 @@ impl ChunkGrid {
         // First get viewport, so we know which chunks are on screen and should be updated
         let center_chunk_x = (camera_target.x as i32).div_euclid(CHUNK_SIZE.0 as i32);
         let center_chunk_y = (camera_target.y as i32).div_euclid(CHUNK_SIZE.1 as i32);
-        let active_keys: Vec<(i32, i32)> = vec![
+        self.active_keys = vec![
             (center_chunk_x - 1, center_chunk_y - 1),
             (center_chunk_x, center_chunk_y - 1),
             (center_chunk_x - 1, center_chunk_y),
@@ -88,7 +92,7 @@ impl ChunkGrid {
         // First: get all movements for each chunk
         // Second: apply all movements
         let mut chunk_movements: Vec<Vec<GridMovement>> = vec![];
-        for key in &active_keys {
+        for key in &self.active_keys {
             if let Some(chunk) = self.grid.get_mut(key) {
                 chunk_movements.push(chunk.get_chunk_movements(rng, render_ratio)); // Update all in-chunk movements and return all crosschunk movements
             }
@@ -175,6 +179,24 @@ impl ChunkGrid {
                     chunk_key,
                     Chunk::new(CHUNK_SIZE, seed, chunk_key, render_ratio),
                 );
+                // Calculate initial stability for all pixels in the new chunk.
+                // Process bottom-to-top so pixels below are stable before pixels above query them.
+                let (cx, cy) = chunk_key;
+                for y in (0..CHUNK_SIZE.1 as i32).rev() {
+                    for x in 0..CHUNK_SIZE.0 as i32 {
+                        let world_x = cx * CHUNK_SIZE.0 as i32 + x;
+                        let world_y = cy * CHUNK_SIZE.1 as i32 + y;
+                        let (stability, state) = self.calculate_pixel_stability(world_x, world_y);
+                        if let Some(pixel) = self.get_pixel_mut(world_x, world_y) {
+                            pixel.set_stability(stability);
+                            pixel.set_state(state);
+                        }
+                    }
+                }
+                // Update the chunk's texture to reflect the new stability state
+                if let Some(chunk) = self.grid.get_mut(&chunk_key) {
+                    chunk.update_texture();
+                }
             }
             Some(_) => {}
         }
@@ -189,10 +211,14 @@ impl ChunkGrid {
     }
 
     pub fn draw(&self, draw_debug: bool) {
-        for ((chunk_key_x, chunk_key_y), chunk) in self.grid.iter() {
-            chunk.draw_texture(*chunk_key_x, *chunk_key_y);
+        for chunk_key in &self.active_keys {
+            let chunk = self
+                .grid
+                .get(&chunk_key)
+                .expect("Expected a chunk at {chunk_key}");
+            chunk.draw_texture(chunk_key.0, chunk_key.1);
             if draw_debug {
-                chunk.draw_stability_texture(*chunk_key_x, *chunk_key_y);
+                chunk.draw_stability_texture(chunk_key.0, chunk_key.1);
             }
         }
     }
@@ -268,10 +294,6 @@ impl ChunkGrid {
                 continue; // already processed
             }
 
-            // If out of bounds then skip
-            if x < 0 || y < 0 || x >= RENDER_SIZE.0 as i32 || y >= RENDER_SIZE.1 as i32 - 1 {
-                continue;
-            }
             // Phase 1: calclulate stability and return the stability and state in a tuple
             let (new_stability, new_state) = { self.calculate_pixel_stability(x, y) };
 
@@ -302,8 +324,12 @@ impl ChunkGrid {
                 return (0.0, PixelState::Falling);
             }
 
-            // If floor of map is reached or Pixel has no decay, then always return stable
-            if world_y >= RENDER_SIZE.1 as i32 - 1 || pixel.stability_decay() == 0.0 {
+            // If no chunk exists below this one, treat as floor (world boundary)
+            let chunk_below = (
+                world_x.div_euclid(CHUNK_SIZE.0 as i32),
+                (world_y + 1).div_euclid(CHUNK_SIZE.1 as i32),
+            );
+            if !self.grid.contains_key(&chunk_below) || pixel.stability_decay() == 0.0 {
                 return (1.0, PixelState::Stable);
             }
 
