@@ -16,17 +16,14 @@
     THis should be added by changing the stability of all surrounding pixels whenever 1 pixel is added or removed
 [x] Move UI logic and drawing to a seperate struct. This struct should be owned by App.
 [x] Improved world gen. It is now easier to generate a continuous world
-[] Add Game User Interface and different modes:
-    [] Add a drawing mode
-    [] Add a select mode (used for selecting minions)
-    [] Add a ?Debug Mode?
-    [] Add buttons for the modes:
-        [] Brush size in drawing mode
-        [] Brush Pixel Type in drawing mode
-        [] Select target in selecting mode
-        [] Debug mode should enable all debug drawing
-    [] Add a notification bar / window / popup thing
-        [] WHenever the user changes modes or does an action, show notification with what happened
-[] Add Minion logic
-[] Add way to skip pixels that do not require updating
-[] Implement parallelization
+[x] Add way to skip pixels that do not require updating
+[] Make a proper UI. Should probably start from scratch
+    [] Remove old UserInterface code
+    [] add new UserInterface struct or whatever, maybe do some brainstorming on how to set it up properly
+    [] UI should be always visible, like were in an IDE.
+    [] Add buttons:
+        [] Exit simulation (top right)
+        [] DIfferent tools (left or right side of the screen)
+            [] Select
+            [] Draw (hovering over this should enable pixel type selection)
+            [] Remove
